@@ -1,0 +1,42 @@
+# CardioClaw Example Configuration
+# Define heartbeats (recurring tasks and reminders)
+
+heartbeats:
+  # Morning briefing (recurring)
+  - name: Morning Briefing v3
+    schedule: "0 8 * * *"  # Daily at 8 AM
+    prompt: |
+      Run morning briefing: weather + calendar + inbox.
+      Keep it under 6 sentences.
+    delivery: telegram
+
+  # Evening wrap (recurring, weekdays only)
+  - name: Evening Wrap-up v3
+    schedule: "0 19 * * 1-5"  # Weekdays at 7 PM
+    prompt: "Evening wrap: what got done today, what's tomorrow"
+    delivery: telegram
+
+  # One-shot reminder
+  - name: Gym Reminder
+    schedule: at 2026-02-15 18:00
+    message: "Reminder: Gym at 6 PM! 🏋️"
+    sessionTarget: main
+    delivery: telegram
+
+  # Health check (no delivery, silent)
+  - name: Session Health Check
+    schedule: "0 */2 * * *"  # Every 2 hours
+    prompt: "Check session health. Only alert if context over 80%."
+    delivery: none
+    sessionTarget: isolated
+
+  # Weekly review
+  - name: Weekly Review
+    schedule: "0 17 * * 5"  # Fridays at 5 PM
+    prompt: |
+      Weekly review:
+      - What got done this week?
+      - What's priority for next week?
+      - Any blockers or risks?
+    delivery: telegram
+    model: opus

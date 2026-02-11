@@ -1,0 +1,6 @@
+heartbeats:
+  - name: CardioClaw Test
+    schedule: at 2026-02-12 09:00
+    message: "CardioClaw MVP test - sync working!"
+    sessionTarget: main
+    delivery: none
