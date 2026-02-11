@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🫀 CardioClaw Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'SF Pro', system-ui, sans-serif; }
+    .agent-beast { background: #3b82f6; }
+    .agent-gambit { background: #a855f7; }
+    .agent-rogue { background: #ec4899; }
+    .agent-wolverine { background: #f59e0b; }
+    .agent-cyclops { background: #ef4444; }
+    .agent-storm { background: #06b6d4; }
+    .agent-default { background: #6b7280; }
+    .heartbeat-bar {
+      height: 36px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      margin-bottom: 8px;
+      color: white;
+      font-size: 14px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .heartbeat-bar:hover { opacity: 0.8; }
+    .status-icon { font-size: 18px; margin-right: 8px; }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <div class="max-w-7xl mx-auto p-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-3xl font-bold">🫀 CardioClaw Dashboard</h1>
+      <div class="flex gap-3">
+        <span class="text-sm text-gray-500" id="lastRefresh">Last updated: Just now</span>
+        <button onclick="refresh()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+          🔄 Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- System Health Panel -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">System Health</h2>
+      <div class="grid grid-cols-4 gap-4">
+        <div class="text-center">
+          <div class="text-3xl font-bold text-green-600" id="activeCount">-</div>
+          <div class="text-sm text-gray-600">Active</div>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl font-bold text-red-600" id="failingCount">-</div>
+          <div class="text-sm text-gray-600">Failing</div>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl font-bold text-blue-600" id="managedCount">-</div>
+          <div class="text-sm text-gray-600">Managed</div>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl font-bold text-gray-600" id="unmanagedCount">-</div>
+          <div class="text-sm text-gray-600">Unmanaged</div>
+        </div>
+      </div>
+      <div class="mt-4 text-center text-sm text-gray-600" id="nextRun">
+        Next run: -
+      </div>
+    </div>
+
+    <!-- Failing Jobs Alert -->
+    <div id="failingAlert" class="hidden bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+      <h3 class="text-red-800 font-semibold mb-2">⚠️ Failing Jobs</h3>
+      <div id="failingList"></div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="bg-white rounded-lg shadow p-6">
+      <h2 class="text-xl font-semibold mb-4">Active Heartbeats</h2>
+      <div id="timeline" class="space-y-2"></div>
+    </div>
+  </div>
+
+  <script>
+    let lastUpdate = Date.now();
+
+    // Load data on page load
+    loadData();
+
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+      loadData();
+      updateLastRefresh();
+    }, 30000);
+
+    // Update "last refreshed" every second
+    setInterval(updateLastRefresh, 1000);
+
+    async function loadData() {
+      try {
+        const [heartbeats, status] = await Promise.all([
+          fetch('/api/heartbeats').then(r => r.json()),
+          fetch('/api/status').then(r => r.json())
+        ]);
+
+        renderStatus(status);
+        renderTimeline(heartbeats.jobs);
+        renderFailingJobs(status.failingJobs);
+        lastUpdate = Date.now();
+      } catch (err) {
+        console.error('Failed to load data:', err);
+      }
+    }
+
+    function renderStatus(status) {
+      document.getElementById('activeCount').textContent = status.active;
+      document.getElementById('failingCount').textContent = status.failing;
+      document.getElementById('managedCount').textContent = status.managed;
+      document.getElementById('unmanagedCount').textContent = status.unmanaged;
+
+      if (status.nextJob) {
+        const timeUntil = formatTimeUntil(status.nextJob.next_run_at);
+        document.getElementById('nextRun').textContent = 
+          `Next run: ${status.nextJob.name} in ${timeUntil}`;
+      }
+    }
+
+    function renderFailingJobs(failing) {
+      const alert = document.getElementById('failingAlert');
+      const list = document.getElementById('failingList');
+      
+      if (failing && failing.length > 0) {
+        alert.classList.remove('hidden');
+        list.innerHTML = failing.map(job => `
+          <div class="text-sm text-red-700 mb-1">
+            <strong>${job.name}</strong>
+            ${job.last_error ? `<br><span class="text-xs">${job.last_error.substring(0, 100)}</span>` : ''}
+          </div>
+        `).join('');
+      } else {
+        alert.classList.add('hidden');
+      }
+    }
+
+    function renderTimeline(jobs) {
+      const timeline = document.getElementById('timeline');
+      
+      if (jobs.length === 0) {
+        timeline.innerHTML = '<p class="text-gray-500">No heartbeats found. Run <code>cardioclaw sync</code> to create some!</p>';
+        return;
+      }
+
+      // Group by agent
+      const byAgent = {};
+      jobs.forEach(job => {
+        const agent = job.agent || 'unassigned';
+        if (!byAgent[agent]) byAgent[agent] = [];
+        byAgent[agent].push(job);
+      });
+
+      let html = '';
+      for (const [agent, agentJobs] of Object.entries(byAgent)) {
+        html += `<div class="mb-4">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">${agent.charAt(0).toUpperCase() + agent.slice(1)}</h3>
+          ${agentJobs.map(renderJob).join('')}
+        </div>`;
+      }
+
+      timeline.innerHTML = html;
+    }
+
+    function renderJob(job) {
+      const agentClass = job.agent ? `agent-${job.agent}` : 'agent-default';
+      const statusIcon = job.status === 'failing' ? '✗' : job.status === 'active' ? '✓' : '⏸';
+      const nextRun = job.next_run_at ? formatNextRun(job.next_run_at) : 'Not scheduled';
+      const managed = job.managed ? '📋' : '';
+
+      return `
+        <div class="heartbeat-bar ${agentClass}" title="${job.name}">
+          <span class="status-icon">${statusIcon}</span>
+          <span class="flex-1">${managed} ${job.name}</span>
+          <span class="text-xs opacity-80">Next: ${nextRun}</span>
+        </div>
+      `;
+    }
+
+    function formatNextRun(timestamp) {
+      if (!timestamp) return 'Not scheduled';
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diffMs = date - now;
+
+      if (diffMs < 0) return 'Overdue';
+
+      if (date.toDateString() === now.toDateString()) {
+        return 'Today ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      }
+
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      if (date.toDateString() === tomorrow.toDateString()) {
+        return 'Tomorrow ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      }
+
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    }
+
+    function formatTimeUntil(timestamp) {
+      const now = Date.now();
+      const diffMs = timestamp - now;
+      if (diffMs < 0) return 'overdue';
+
+      const minutes = Math.floor(diffMs / 60000);
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+
+      if (days > 0) return `${days}d ${hours % 24}h`;
+      if (hours > 0) return `${hours}h ${minutes % 60}m`;
+      return `${minutes}m`;
+    }
+
+    function updateLastRefresh() {
+      const elapsed = Math.floor((Date.now() - lastUpdate) / 1000);
+      const text = elapsed === 0 ? 'Just now' : 
+                   elapsed < 60 ? `${elapsed}s ago` :
+                   `${Math.floor(elapsed / 60)}m ago`;
+      document.getElementById('lastRefresh').textContent = `Last updated: ${text}`;
+    }
+
+    async function refresh() {
+      await fetch('/api/refresh', { method: 'POST' });
+      await loadData();
+    }
+  </script>
+</body>
+</html>

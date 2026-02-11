@@ -4,6 +4,7 @@ const { Command } = require('commander');
 const { sync } = require('../lib/sync');
 const { status } = require('../lib/status');
 const { discover } = require('../lib/discovery');
+const { startDashboard } = require('../lib/server');
 const packageJson = require('../package.json');
 
 const program = new Command();
@@ -40,6 +41,15 @@ program
     console.log('');
     discover(configPath);
     console.log('✓ Discovery complete\n');
+  });
+
+program
+  .command('dashboard')
+  .description('Start web dashboard at localhost:3333')
+  .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
+  .option('-p, --port <port>', 'Port number', '3333')
+  .action((options) => {
+    startDashboard(options);
   });
 
 program.parse(process.argv);
