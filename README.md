@@ -1,27 +1,37 @@
 # 🫀 CardioClaw
 
-**YAML to OpenClaw cron sync tool.**
+**YAML-based heartbeat orchestration for OpenClaw.**
 
-Define recurring tasks (heartbeats) in clean YAML, sync them to OpenClaw cron jobs with one command.
+Define recurring tasks in clean YAML, visualize them on a timeline dashboard, and monitor system health—all without touching JSON config files.
 
-Inspired by [Antfarm](https://antfarm.cool) - simple, contained, shippable.
+Inspired by [Antfarm](https://antfarm.cool) - simple, self-contained, shippable.
+
+---
+
+## Features
+
+### 1. YAML → Cron Translation ✅
+Write heartbeats in YAML, sync to OpenClaw cron jobs with one command.
+
+### 2. Heartbeat Discovery ✅
+Auto-discover all OpenClaw cron jobs, consolidate with YAML, track managed vs unmanaged.
+
+### 3. Visual Dashboard ✅
+Timeline view showing all scheduled tasks, color-coded by agent, with system health monitoring.
 
 ---
 
 ## Quick Start
 
-### 1. Install
+### Install
 
 ```bash
-npm install -g cardioclaw
+cd /Users/dave/clawd/cardioclaw
+npm install
+npm link
 ```
 
-Or use without installing:
-```bash
-npx cardioclaw sync
-```
-
-### 2. Create config
+### 1. Create config
 
 Create `cardioclaw.yaml`:
 
@@ -39,7 +49,7 @@ heartbeats:
     delivery: telegram
 ```
 
-### 3. Sync
+### 2. Sync
 
 ```bash
 cardioclaw sync
@@ -54,20 +64,123 @@ cardioclaw sync
 
 ✅ Summary:
   ✓ 2 job(s) created
+
+🔍 Discovering heartbeats...
+  Found 14 OpenClaw cron job(s)
+  ✓ Updated state database
 ```
 
-That's it! Your heartbeats are now running as OpenClaw cron jobs.
+### 3. Check status
+
+```bash
+cardioclaw status
+```
+
+```
+🫀 CardioClaw Status
+
+📊 Active (14 jobs):
+
+  📋 ✓ Morning Briefing (beast)
+      Next: Tomorrow 8:00 AM
+  📋 ✓ Gym Reminder
+      Next: Today 6:00 PM
+  ...
+
+────────────────────────────────────────────────────────────
+  Managed: 2 | Unmanaged: 12 | Failing: 0
+  Next run: Gym Reminder in 3h 12m
+```
+
+### 4. Start dashboard
+
+```bash
+cardioclaw dashboard
+```
+
+```
+🔍 Refreshing heartbeat data...
+🫀 CardioClaw Dashboard
+   → http://localhost:3333
+
+Press Ctrl+C to stop
+```
+
+Open http://localhost:3333 to see the timeline!
 
 ---
 
-## What It Does
+## Commands
 
-CardioClaw reads YAML heartbeat definitions and creates OpenClaw cron jobs. Each heartbeat becomes a scheduled task that:
+### `cardioclaw sync`
 
-- **Recurring tasks** (cron expressions): Run morning briefings, evening wrap-ups, health checks, etc.
-- **One-shot reminders** (absolute timestamps): "Gym at 6 PM", "Meeting tomorrow at 2 PM"
-- **Prompt-based** (agentTurn): Run in isolated sessions, announce results to Telegram/Discord/etc.
-- **Message-based** (systemEvent): Inject text into main session (simple reminders)
+Read `cardioclaw.yaml` and create OpenClaw cron jobs.
+
+**Options:**
+- `-c, --config <path>` - Path to config file (default: `cardioclaw.yaml`)
+- `--dry-run` - Show what would be created without executing
+
+**Examples:**
+
+```bash
+# Sync with default config
+cardioclaw sync
+
+# Sync with custom config
+cardioclaw sync --config my-heartbeats.yaml
+
+# Dry run (preview without creating)
+cardioclaw sync --dry-run
+```
+
+### `cardioclaw status`
+
+Show all heartbeats and system health summary.
+
+**Options:**
+- `-c, --config <path>` - Path to config file (default: `cardioclaw.yaml`)
+- `--no-refresh` - Skip discovery refresh
+
+**Examples:**
+
+```bash
+# Show status (auto-refreshes)
+cardioclaw status
+
+# Show status without refreshing
+cardioclaw status --no-refresh
+```
+
+### `cardioclaw discover`
+
+Discover and refresh all OpenClaw cron jobs (updates state database).
+
+**Options:**
+- `-c, --config <path>` - Path to config file (default: `cardioclaw.yaml`)
+
+**Example:**
+
+```bash
+cardioclaw discover
+```
+
+### `cardioclaw dashboard`
+
+Start web dashboard at localhost:3333.
+
+**Options:**
+- `-c, --config <path>` - Path to config file (default: `cardioclaw.yaml`)
+- `-p, --port <port>` - Port number (default: `3333`)
+
+**Examples:**
+
+```bash
+# Start dashboard on default port
+cardioclaw dashboard
+
+# Start on custom port
+cardioclaw dashboard --port 8080
+```
 
 ---
 
@@ -84,9 +197,9 @@ heartbeats:
     
     # Optional fields:
     delivery: string          # "telegram" | "discord" | "none" (default: none)
-    sessionTarget: string     # "isolated" | "main" (default: isolated)
+    sessionTarget: string     # "isolated" | "main" (default: isolated for prompt, main for message)
     model: string             # Model override (e.g., "opus", "sonnet")
-    agent: string             # Agent name (future: for multi-agent)
+    agent: string             # Agent name (for future multi-agent support)
 ```
 
 ### Schedule Formats
@@ -105,29 +218,31 @@ schedule: at 2026-02-15 18:00   # Feb 15, 2026 at 6 PM
 schedule: at 2026-02-20 09:30   # Feb 20, 2026 at 9:30 AM
 ```
 
-(Timezone: Uses your local timezone, converted to ISO 8601 for OpenClaw)
+(Timezone: America/New_York)
 
 ### Payload Types
 
 **`prompt` (agentTurn):**
 - Runs in isolated session
 - Agent processes the prompt
-- Result can be announced via `delivery` channel
+- Result announced via `delivery` channel
 - Use for: briefings, summaries, analysis
 
 **`message` (systemEvent):**
 - Injects text into main session
-- No agent processing, just delivers the text
+- No agent processing, just delivers text
 - Use for: simple reminders, notifications
 
 ---
 
 ## Examples
 
+See `examples/cardioclaw.yaml` for complete examples.
+
 ### Morning Briefing (Recurring)
 
 ```yaml
-- name: Morning Briefing
+- name: Morning Briefing v3
   schedule: "0 8 * * *"
   prompt: |
     Run morning briefing:
@@ -141,7 +256,7 @@ schedule: at 2026-02-20 09:30   # Feb 20, 2026 at 9:30 AM
 ### Evening Wrap-up (Weekdays Only)
 
 ```yaml
-- name: Evening Wrap-up
+- name: Evening Wrap-up v3
   schedule: "0 19 * * 1-5"  # Mon-Fri at 7 PM
   prompt: "Evening wrap: what got done today, what's tomorrow"
   delivery: telegram
@@ -157,7 +272,7 @@ schedule: at 2026-02-20 09:30   # Feb 20, 2026 at 9:30 AM
   delivery: telegram
 ```
 
-### Health Check (Silent)
+### Silent Health Check
 
 ```yaml
 - name: Session Health Check
@@ -183,73 +298,75 @@ schedule: at 2026-02-20 09:30   # Feb 20, 2026 at 9:30 AM
 
 ---
 
-## Commands
+## Dashboard
 
-### `cardioclaw sync`
+The dashboard provides a visual timeline of all heartbeats.
 
-Read `cardioclaw.yaml` and create OpenClaw cron jobs.
+**Features:**
+- Week-view timeline (sortable by agent)
+- Color-coded by agent (Beast=blue, Gambit=purple, etc.)
+- System health panel (active, failing, managed counts)
+- Next run countdown
+- Failing jobs alert
+- Auto-refresh every 30 seconds
+- Mobile responsive
 
-**Options:**
-- `-c, --config <path>` - Path to config file (default: `cardioclaw.yaml`)
-- `--dry-run` - Show what would be created without executing
+**How to use:**
 
-**Config search order:**
-1. `--config` path (if provided)
-2. `./cardioclaw.yaml` (current directory)
-3. `~/.cardioclaw/cardioclaw.yaml` (home directory)
+1. Start dashboard: `cardioclaw dashboard`
+2. Open http://localhost:3333
+3. View timeline, click jobs for details
+4. Manual refresh button available
 
-**Examples:**
-
-```bash
-# Sync with default config
-cardioclaw sync
-
-# Sync with custom config
-cardioclaw sync --config my-heartbeats.yaml
-
-# Dry run (show what would be created)
-cardioclaw sync --dry-run
-```
+**API Endpoints:**
+- `GET /api/heartbeats` - List all jobs
+- `GET /api/heartbeats/:id` - Job details
+- `GET /api/status` - System health summary
+- `POST /api/refresh` - Trigger discovery refresh
 
 ---
 
 ## How It Works
 
-1. **Parse YAML** → CardioClaw reads your heartbeat definitions
-2. **Translate** → Each heartbeat becomes an `openclaw cron add` command
-3. **Execute** → Commands are executed to create cron jobs
-4. **Summary** → Print results (jobs created, errors)
+### Architecture
 
-**Under the hood:**
+**State Storage:** SQLite database at `~/.cardioclaw/state.db`
 
-```yaml
-# This YAML...
-- name: Morning Briefing
-  schedule: "0 8 * * *"
-  prompt: "Run morning briefing"
-  delivery: telegram
-```
+**Tables:**
+- `jobs` - All discovered OpenClaw cron jobs
+- `runs` - Historical run data (future)
 
-```bash
-# ...becomes this OpenClaw command:
-openclaw cron add \
-  --name "Morning Briefing" \
-  --schedule.kind cron \
-  --schedule.expr "0 8 * * *" \
-  --schedule.tz "America/New_York" \
-  --payload.kind agentTurn \
-  --payload.message "Run morning briefing" \
-  --sessionTarget isolated \
-  --delivery.mode announce \
-  --delivery.channel telegram
-```
+**Discovery Process:**
+1. Query `openclaw cron list --json`
+2. Parse `cardioclaw.yaml` to identify managed jobs
+3. Update SQLite with job data (status, next run, errors)
+4. Mark managed vs unmanaged jobs
+
+**Sync Process:**
+1. Parse `cardioclaw.yaml`
+2. For each heartbeat, build OpenClaw cron command
+3. Execute `openclaw cron add` to create job
+4. Run discovery to update state
+
+---
+
+## Tech Stack
+
+| Component | Technology | Why |
+|-----------|------------|-----|
+| CLI | Node.js + Commander | Clean CLI framework |
+| Config | YAML (js-yaml) | Human-friendly |
+| State | SQLite (better-sqlite3) | Simple, self-contained |
+| Backend | Express.js | Lightweight, no bloat |
+| Frontend | HTML + Tailwind + Vanilla JS | No build step, fast |
+| Integration | child_process | Call OpenClaw CLI |
 
 ---
 
 ## Requirements
 
-- **OpenClaw CLI** installed and configured (`openclaw --version` should work)
-- **Node.js** 16+ (for running CardioClaw)
+- **OpenClaw CLI** installed and configured (`openclaw --version`)
+- **Node.js** 16+
 
 ---
 
@@ -315,6 +432,8 @@ Then run `cardioclaw sync` from anywhere.
 ### How do I see what jobs are running?
 
 ```bash
+cardioclaw status
+# or
 openclaw cron list
 ```
 
@@ -324,13 +443,15 @@ openclaw cron list
 openclaw cron remove --jobId <id>
 ```
 
-### Can I update a heartbeat without recreating it?
+Or remove from `cardioclaw.yaml` and manually delete via OpenClaw CLI.
 
-Not yet. For now, remove the old job and run `cardioclaw sync` again to recreate.
+### Can I update a heartbeat?
+
+Not yet. For now, remove the old job and run `cardioclaw sync` again.
 
 ### What if I have duplicate job names?
 
-OpenClaw will create multiple jobs with the same name. Make sure your `name` fields are unique.
+OpenClaw allows multiple jobs with the same name. Make sure your `name` fields in YAML are unique.
 
 ### How do I test without creating jobs?
 
@@ -342,24 +463,34 @@ cardioclaw sync --dry-run
 
 CardioClaw prints errors for failed jobs and continues with remaining heartbeats. Exit code is 1 if any errors occurred.
 
+### Can I run the dashboard in the background?
+
+```bash
+cardioclaw dashboard > dashboard.log 2>&1 &
+```
+
+Or use a process manager like `pm2`.
+
 ---
 
-## Roadmap (Future)
+## Roadmap
 
-**v0.2:**
-- `cardioclaw status` - List all jobs created by CardioClaw
-- `cardioclaw rm <name>` - Remove job by name
-- Conflict detection (warn if job already exists)
+**Phase 1 (Complete):**
+- ✅ YAML → Cron translation
+- ✅ Discovery & consolidation
+- ✅ Visual dashboard
 
-**v0.3:**
-- Update support (modify existing jobs)
-- Orphan detection (find jobs not in YAML)
+**Phase 2 (Future):**
+- Update support (modify existing jobs from YAML)
+- Delete orphaned jobs (in OpenClaw but not YAML)
+- Dashboard: week navigation, job detail modal
+- Dashboard: click to disable/enable jobs
+
+**Phase 3 (Future):**
+- Multi-agent support (route to specific agents)
 - Interval schedules (`every: 2h`)
-
-**v1.0:**
-- Dashboard (web UI for viewing/editing heartbeats)
-- Discovery service (announce heartbeats to network)
-- Active hours (only run between 9 AM - 10 PM)
+- Active hours (only run 9 AM - 10 PM)
+- Conflict detection (warn if schedule overlap)
 
 ---
 
@@ -376,4 +507,4 @@ Inspired by [Antfarm](https://antfarm.cool).
 
 ---
 
-**That's it. Simple, contained, shippable.** 🫀
+**Simple, self-contained, shippable.** 🫀
