@@ -1,30 +1,40 @@
-# PRD: CardioClaw MVP - YAML to Cron Sync
+# PRD: CardioClaw - YAML Heartbeat Orchestration for OpenClaw
 
 **Mission ID:** CARDIO-001  
 **Author:** Beast  
-**Date:** 2026-02-11 (REVISED)  
+**Date:** 2026-02-11 (REVISED - Full Phase 1)  
 **Status:** Ready for Build  
 **Priority:** 5/5  
-**Complexity:** S (Small - build today)  
-**Timeline:** 4-6 hours  
+**Complexity:** M (Medium)  
+**Timeline:** 2-3 days  
 **Repo:** https://github.com/dave-melillo/cardioclaw  
-**Inspiration:** https://antfarm.cool (simplicity, not features)
+**Inspiration:** https://antfarm.cool (simple implementation of complete features)
 
 ---
 
-## What We're Building (End of Day)
+## Executive Summary
 
-A minimal CLI tool that reads **YAML heartbeat definitions** and creates **OpenClaw cron jobs**. That's it.
+CardioClaw brings **Antfarm-style simplicity** to OpenClaw heartbeat management. Write heartbeats in YAML, visualize them on a timeline, and monitor system health—all without touching JSON config files.
 
-**Deliverable:** Single Node.js script with one command: `cardioclaw sync`
+**What it solves:**
+- Managing OpenClaw cron jobs is tedious (manual JSON or CLI commands)
+- No visual way to see **what's scheduled when**
+- Hard to spot failing jobs or dead heartbeats
+
+**What CardioClaw provides (Phase 1):**
+1. **YAML → Cron Translation** — Write clean YAML, run `cardioclaw sync`
+2. **Heartbeat Discovery** — Auto-discover all heartbeats across OpenClaw
+3. **Visual Dashboard** — Timeline showing all scheduled tasks
+
+**Implementation Philosophy:** Simple, self-contained, like Antfarm. TypeScript + SQLite + React. No Docker, no Redis, no complexity.
 
 ---
 
-## Core Feature (MVP Only)
+## Feature 1: YAML → Cron Translation
 
-### YAML → OpenClaw Cron Translation
+### User Experience
 
-**User writes clean YAML:**
+**User writes YAML:**
 ```yaml
 # cardioclaw.yaml
 heartbeats:
@@ -46,188 +56,434 @@ cardioclaw sync
 # ✓ Created 2 OpenClaw cron jobs
 ```
 
-**What it does:**
-1. Parse `cardioclaw.yaml` (in current dir or `~/.cardioclaw/`)
-2. For each heartbeat, call:
-   ```bash
-   openclaw cron add \
-     --name "Morning Briefing" \
-     --schedule.kind cron \
-     --schedule.expr "0 8 * * *" \
-     --schedule.tz "America/New_York" \
-     --payload.kind agentTurn \
-     --payload.message "Run morning briefing..." \
-     --sessionTarget isolated \
-     --delivery.mode announce \
-     --delivery.channel telegram
-   ```
-3. Print summary (jobs created, errors)
-
----
-
-## YAML Schema (Minimal)
+### YAML Schema (Simple)
 
 ```yaml
 heartbeats:
-  - name: string           # Required: Job name (must be unique)
+  - name: string           # Required: Unique job name
     schedule: string       # Required: "0 8 * * *" OR "at 2026-02-15 18:00"
-    prompt: string         # Either prompt (agentTurn) OR message (systemEvent)
-    message: string        # Use for systemEvent one-shots
-    agent: string          # Optional: agent name (default: current agent)
-    delivery: string       # Optional: "telegram" | "none" (default: none)
-    sessionTarget: string  # Optional: "main" | "isolated" (default: isolated)
+    prompt: string         # For agentTurn (isolated session)
+    message: string        # For systemEvent (main session)
+    agent: string          # Optional: agent name
+    delivery: string       # Optional: "telegram" | "none"
+    sessionTarget: string  # Optional: "main" | "isolated"
     model: string          # Optional: model override
 ```
 
-**Schedule formats supported:**
-- Cron expression: `"0 8 * * *"` (daily at 8 AM)
-- One-shot: `at 2026-02-15 18:00` (absolute time in local timezone)
+### Implementation
+
+**Core logic:**
+1. Parse YAML with `js-yaml`
+2. Translate each heartbeat to OpenClaw cron format
+3. Execute `openclaw cron add` for each entry
+4. Store mapping in local SQLite (job name → OpenClaw cron id)
+
+**Schedule translation:**
+- Cron expression: `"0 8 * * *"` → `{ kind: "cron", expr: "0 8 * * *", tz: "America/New_York" }`
+- One-shot: `at 2026-02-15 18:00` → `{ kind: "at", at: "2026-02-15T18:00:00-05:00" }`
+
+**Definition of Done (F1):**
+- ✅ `cardioclaw sync` reads `cardioclaw.yaml`
+- ✅ Creates OpenClaw cron jobs via `openclaw cron add`
+- ✅ Supports cron expressions and `at` timestamps
+- ✅ Handles both `prompt` (agentTurn) and `message` (systemEvent)
+- ✅ Stores job mappings in SQLite (`~/.cardioclaw/state.db`)
+- ✅ Validates YAML schema, reports errors
 
 ---
 
-## What's OUT OF SCOPE (v1)
+## Feature 2: Heartbeat Discovery & Consolidation
 
-❌ Dashboard  
-❌ Discovery service  
-❌ Daemon/background process  
-❌ Conflict detection (just create jobs)  
-❌ Orphan detection  
-❌ Update/delete via YAML  
-❌ Interval schedules (`every 2h`)  
-❌ Active hours  
-❌ Status checks  
+### User Experience
 
-*These can come in v2 if Dave wants to expand.*
+**Check system health:**
+```bash
+cardioclaw status
+
+# OUTPUT:
+# 🫀 CardioClaw Status
+# 
+# Active (8 jobs):
+#   Morning Briefing (beast)       Next: Tomorrow 8:00 AM    ✓
+#   Evening Wrap-up (beast)        Next: Today 7:00 PM       ✗ Failed
+#   Trello Sync                    Next: In 12 minutes       ✓
+#   ...
+#
+# Failing (1):
+#   Evening Wrap-up - Last error: timeout
+#
+# Managed by YAML (3) | Unmanaged (5)
+```
+
+### Architecture
+
+**Discovery sources:**
+1. **OpenClaw cron jobs** — Query `openclaw cron list --json`
+2. **cardioclaw.yaml** — Local heartbeat definitions (source of truth)
+
+**State storage:**
+- SQLite database: `~/.cardioclaw/state.db`
+- Tables:
+  - `jobs` — All discovered OpenClaw cron jobs
+  - `managed` — Jobs created by CardioClaw (from YAML)
+  - `runs` — Historical run data (for timeline)
+
+**Schema:**
+```sql
+CREATE TABLE jobs (
+  id TEXT PRIMARY KEY,           -- OpenClaw cron job id
+  name TEXT,
+  schedule TEXT,
+  agent TEXT,
+  status TEXT,                   -- 'active' | 'failing' | 'disabled'
+  next_run_at INTEGER,           -- Unix timestamp
+  last_run_at INTEGER,
+  last_status TEXT,              -- 'ok' | 'error'
+  last_error TEXT,
+  managed INTEGER DEFAULT 0      -- 1 if from cardioclaw.yaml
+);
+
+CREATE TABLE runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  job_id TEXT,
+  started_at INTEGER,
+  ended_at INTEGER,
+  status TEXT,
+  error TEXT
+);
+```
+
+### Implementation
+
+**Discovery process (runs on `sync` or `status`):**
+```typescript
+async function discover() {
+  // 1. Fetch OpenClaw cron jobs
+  const result = execSync('openclaw cron list --json', { encoding: 'utf-8' });
+  const cronJobs = JSON.parse(result).jobs || [];
+
+  // 2. Parse cardioclaw.yaml
+  const yaml = YAML.parse(fs.readFileSync('cardioclaw.yaml', 'utf8'));
+  const managedNames = new Set(yaml.heartbeats.map(h => h.name));
+
+  // 3. Update SQLite
+  const db = new Database('~/.cardioclaw/state.db');
+  for (const job of cronJobs) {
+    db.run(`
+      INSERT OR REPLACE INTO jobs (id, name, schedule, status, next_run_at, managed)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `, [
+      job.id,
+      job.name,
+      JSON.stringify(job.schedule),
+      job.enabled ? 'active' : 'disabled',
+      job.state?.nextRunAtMs,
+      managedNames.has(job.name) ? 1 : 0
+    ]);
+  }
+}
+```
+
+**CLI Commands:**
+- `cardioclaw status` — Show consolidated view
+- `cardioclaw discover` — Force refresh (usually automatic on sync)
+
+### Definition of Done (F2)
+
+- ✅ Discovers all OpenClaw cron jobs via `openclaw cron list`
+- ✅ Consolidates with `cardioclaw.yaml` definitions
+- ✅ Stores state in SQLite (`~/.cardioclaw/state.db`)
+- ✅ Marks jobs as managed (from YAML) vs unmanaged
+- ✅ `cardioclaw status` shows summary with next run times
+- ✅ Flags failing jobs (last status = error)
 
 ---
 
-## Technical Spec
+## Feature 3: Visual Dashboard
 
-### Option 1: Single Node.js Script (Recommended)
+### User Experience
+
+**Start dashboard:**
+```bash
+cardioclaw dashboard
+# Dashboard running at http://localhost:3333
+```
+
+**Browser shows:**
+- Week-view timeline (Monday-Sunday)
+- Each job appears as a bar on the timeline
+- Color-coded by agent (Beast = blue, Gambit = purple, etc.)
+- Click job → detail modal (last run, next run, logs)
+- System health panel (jobs active, failing, next run)
+
+### UI Design (Simple)
+
+**Layout:**
+```
+┌─────────────────────────────────────────────────────────┐
+│  🫀 CardioClaw Dashboard       [Refresh] Last: 1m ago   │
+├─────────────────────────────────────────────────────────┤
+│  ← Mon 2/10  |  Tue 2/11  |  Wed 2/12  |  Thu 2/13 →   │
+│                                                          │
+│  08:00  ━━━ Morning Briefing (beast) ✓                  │
+│  09:00  ━━━ Work Calendar (rogue) ✓                     │
+│  10:00  ┊┊┊ Trello Sync (every 30m) ✓✓✓                 │
+│  12:00                                                   │
+│  14:00  ━━━ Session Health ✓                            │
+│  19:00  ━━━ Evening Wrap (beast) ✗ FAILED               │
+│  22:00  ━━━ Security Review ✓                           │
+│                                                          │
+│  ┌─ System Health ─────────────────────────────────┐    │
+│  │ ✓ 7 active  ✗ 1 failing  ⏱ Next: Trello (8m)  │    │
+│  └──────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Tech Stack (Antfarm-Style)
+
+**Backend:**
+- Express.js server (simple, no framework)
+- Reads from SQLite (`state.db`)
+- API routes:
+  - `GET /api/heartbeats` — List all jobs
+  - `GET /api/heartbeats/:id` — Job details
+  - `GET /api/status` — System health summary
+
+**Frontend:**
+- React (or Preact for smaller bundle)
+- Tailwind CSS for styling
+- No complex state management (just fetch on mount + auto-refresh)
+- Timeline component (CSS Grid)
+
+**Deployment:**
+- Single command: `cardioclaw dashboard`
+- Starts Express server on port 3333
+- Serves bundled React app from `/public`
+
+### Implementation (Minimal)
+
+**Backend (Express):**
+```typescript
+// server.ts
+import express from 'express';
+import Database from 'better-sqlite3';
+
+const app = express();
+const db = new Database('~/.cardioclaw/state.db');
+
+app.get('/api/heartbeats', (req, res) => {
+  const jobs = db.prepare('SELECT * FROM jobs ORDER BY next_run_at').all();
+  res.json({ jobs });
+});
+
+app.get('/api/status', (req, res) => {
+  const active = db.prepare("SELECT COUNT(*) as count FROM jobs WHERE status = 'active'").get();
+  const failing = db.prepare("SELECT COUNT(*) as count FROM jobs WHERE status = 'failing'").get();
+  const nextJob = db.prepare('SELECT * FROM jobs ORDER BY next_run_at LIMIT 1').get();
+  res.json({ active: active.count, failing: failing.count, nextJob });
+});
+
+app.use(express.static('public'));
+app.listen(3333, () => console.log('Dashboard: http://localhost:3333'));
+```
+
+**Frontend (React):**
+```tsx
+// Dashboard.tsx
+import { useEffect, useState } from 'react';
+
+export default function Dashboard() {
+  const [jobs, setJobs] = useState([]);
+  const [status, setStatus] = useState({});
+
+  useEffect(() => {
+    fetch('/api/heartbeats').then(r => r.json()).then(d => setJobs(d.jobs));
+    fetch('/api/status').then(r => r.json()).then(setStatus);
+    const interval = setInterval(() => {
+      // Auto-refresh every 30s
+      fetch('/api/heartbeats').then(r => r.json()).then(d => setJobs(d.jobs));
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="p-4">
+      <h1 className="text-2xl">🫀 CardioClaw Dashboard</h1>
+      <StatusPanel status={status} />
+      <Timeline jobs={jobs} />
+    </div>
+  );
+}
+```
+
+**Timeline Component (Simple):**
+- Group jobs by day
+- Display as horizontal bars (CSS)
+- Color by agent (map agent name → color)
+- Click → show modal with details
+
+### Definition of Done (F3)
+
+- ✅ `cardioclaw dashboard` starts web server on localhost:3333
+- ✅ Shows week-view timeline with all jobs
+- ✅ Color-coded by agent
+- ✅ Status indicators (✓ ok, ✗ failed)
+- ✅ Click job → detail modal (schedule, last run, next run)
+- ✅ System health panel (active/failing counts, next run countdown)
+- ✅ Auto-refresh every 30 seconds
+- ✅ Mobile-responsive (basic)
+
+---
+
+## Tech Stack Summary
+
+| Component | Technology | Why |
+|-----------|------------|-----|
+| CLI | TypeScript + Commander.js | Clean CLI framework |
+| Config | YAML (js-yaml) | Human-friendly |
+| State | SQLite (better-sqlite3) | Simple, self-contained |
+| Backend | Express.js | Lightweight, no framework bloat |
+| Frontend | React + Tailwind | Fast to build, familiar |
+| Integration | `child_process` exec | Call `openclaw cron` CLI |
+
+**Dependencies:**
+- `js-yaml` — YAML parsing
+- `commander` — CLI framework
+- `better-sqlite3` — SQLite driver
+- `express` — Web server
+- `react` / `react-dom` — UI
+- `tailwindcss` — Styling
+
+---
+
+## Project Structure
+
 ```
 cardioclaw/
-├── bin/cardioclaw.js        # CLI entry point
-├── sync.js                  # Core sync logic
-├── parser.js                # YAML → OpenClaw translation
-├── package.json             # Dependencies: js-yaml, commander
+├── bin/
+│   └── cardioclaw.ts          # CLI entry point
+├── src/
+│   ├── commands/
+│   │   ├── sync.ts            # cardioclaw sync
+│   │   ├── status.ts          # cardioclaw status
+│   │   └── dashboard.ts       # cardioclaw dashboard
+│   ├── core/
+│   │   ├── parser.ts          # YAML → OpenClaw translation
+│   │   ├── discovery.ts       # Discover cron jobs
+│   │   └── db.ts              # SQLite helpers
+│   ├── server/
+│   │   ├── index.ts           # Express app
+│   │   └── routes.ts          # API endpoints
+│   └── ui/
+│       ├── components/
+│       │   ├── Timeline.tsx
+│       │   ├── JobCard.tsx
+│       │   └── StatusPanel.tsx
+│       ├── App.tsx
+│       └── index.tsx
+├── public/                    # Built React app
+├── tests/
+│   ├── parser.test.ts
+│   └── discovery.test.ts
+├── package.json
+├── tsconfig.json
 └── README.md
 ```
 
-**How it works:**
-1. Read YAML with `js-yaml`
-2. Parse each heartbeat entry
-3. Build `openclaw cron add` command string
-4. Execute with `child_process.exec()`
-5. Print results
+---
 
-**Install:**
-```bash
-npm install -g cardioclaw
-# OR: npx cardioclaw sync
-```
+## Implementation Timeline (2-3 Days)
 
-### Option 2: Bash Script (Even Simpler)
-Pure bash with `yq` for YAML parsing. No dependencies beyond OpenClaw CLI.
+### Day 1: Sync + Discovery
+**Morning (4 hours):**
+- Set up TypeScript project
+- Implement YAML parser (`parser.ts`)
+- Implement `cardioclaw sync` command
+- Translate schedule formats (cron, at)
+- Test with OpenClaw CLI
 
-**Recommendation:** Start with Node.js (Option 1) for easier YAML parsing and error handling.
+**Afternoon (4 hours):**
+- Set up SQLite database (`db.ts`)
+- Implement discovery (`discovery.ts`)
+- Implement `cardioclaw status` command
+- Test consolidation logic
+
+### Day 2: Dashboard Backend + Frontend
+**Morning (4 hours):**
+- Set up Express server (`server/index.ts`)
+- Implement API routes (`/api/heartbeats`, `/api/status`)
+- Test API with curl
+
+**Afternoon (4 hours):**
+- Set up React app (`ui/`)
+- Build Timeline component (CSS Grid layout)
+- Build StatusPanel component
+- Test rendering with mock data
+
+### Day 3: Polish + Integration
+**Morning (4 hours):**
+- Integrate frontend with backend API
+- Add auto-refresh (30s polling)
+- Add click → detail modal
+- Color-code by agent
+
+**Afternoon (4 hours):**
+- Mobile-responsive styling
+- Error handling (YAML validation, CLI failures)
+- Write README with examples
+- Final testing (create 5+ test jobs, verify timeline)
+
+**Total:** ~24 hours (3 days)
 
 ---
 
-## Implementation Pseudocode
+## Definition of Done (All Features)
 
-```javascript
-// sync.js
-const yaml = require('js-yaml');
-const { execSync } = require('child_process');
-const fs = require('fs');
+### Feature 1: Sync
+- ✅ `cardioclaw sync` reads YAML and creates cron jobs
+- ✅ Supports cron expressions and `at` timestamps
+- ✅ Validates YAML, reports errors
 
-function sync() {
-  // 1. Find cardioclaw.yaml
-  const yamlPath = findYaml(); // check ./cardioclaw.yaml, ~/.cardioclaw/cardioclaw.yaml
-  const config = yaml.load(fs.readFileSync(yamlPath, 'utf8'));
+### Feature 2: Discovery
+- ✅ `cardioclaw status` shows all jobs (managed + unmanaged)
+- ✅ Flags failing jobs
+- ✅ Stores state in SQLite
 
-  // 2. Parse each heartbeat
-  const heartbeats = config.heartbeats || [];
-  let created = 0;
-  let errors = 0;
+### Feature 3: Dashboard
+- ✅ `cardioclaw dashboard` runs web server
+- ✅ Timeline view with week schedule
+- ✅ System health panel
+- ✅ Auto-refresh every 30s
 
-  for (const hb of heartbeats) {
-    try {
-      const cmd = buildCronCommand(hb);
-      execSync(cmd, { stdio: 'inherit' });
-      console.log(`✓ Created: ${hb.name}`);
-      created++;
-    } catch (err) {
-      console.error(`✗ Failed: ${hb.name} - ${err.message}`);
-      errors++;
-    }
-  }
-
-  console.log(`\n✓ ${created} jobs created`);
-  if (errors > 0) console.log(`✗ ${errors} errors`);
-}
-
-function buildCronCommand(hb) {
-  const args = [
-    'openclaw cron add',
-    `--name "${hb.name}"`,
-    parseSchedule(hb.schedule),
-    parsePayload(hb),
-    `--sessionTarget ${hb.sessionTarget || 'isolated'}`,
-    parseDelivery(hb.delivery),
-  ];
-  return args.filter(Boolean).join(' ');
-}
-
-function parseSchedule(schedule) {
-  if (schedule.startsWith('at ')) {
-    const dateStr = schedule.replace('at ', '');
-    return `--schedule.kind at --schedule.at "${new Date(dateStr).toISOString()}"`;
-  } else {
-    // Assume cron expression
-    return `--schedule.kind cron --schedule.expr "${schedule}" --schedule.tz "America/New_York"`;
-  }
-}
-
-function parsePayload(hb) {
-  if (hb.prompt) {
-    return `--payload.kind agentTurn --payload.message "${hb.prompt}"`;
-  } else if (hb.message) {
-    return `--payload.kind systemEvent --payload.text "${hb.message}"`;
-  }
-  throw new Error(`Missing prompt or message for ${hb.name}`);
-}
-
-function parseDelivery(delivery) {
-  if (!delivery || delivery === 'none') return '--delivery.mode none';
-  return `--delivery.mode announce --delivery.channel ${delivery}`;
-}
-```
+### Non-Functional
+- ✅ Works on macOS and Linux
+- ✅ TypeScript with strict mode
+- ✅ Unit tests for parser and discovery
+- ✅ README with installation + examples
+- ✅ Installable via npm
 
 ---
 
-## Definition of Done
+## Out of Scope (Phase 1)
 
-✅ User can write `cardioclaw.yaml` with heartbeat definitions  
-✅ `cardioclaw sync` reads YAML and creates OpenClaw cron jobs  
-✅ Supports cron expressions (`"0 8 * * *"`)  
-✅ Supports one-shot schedules (`at 2026-02-15 18:00`)  
-✅ Handles `prompt` (agentTurn) and `message` (systemEvent)  
-✅ Supports `delivery: telegram` or `delivery: none`  
-✅ Prints summary (jobs created, errors)  
-✅ Works on macOS and Linux  
-✅ Installable via npm or runs with npx  
-✅ README with examples  
+❌ Update/delete via YAML (must use `openclaw cron remove` manually)  
+❌ Conflict detection (warns on duplicate names but doesn't prevent)  
+❌ Historical analytics / charts  
+❌ Edit jobs via dashboard UI (read-only for v1)  
+❌ Multi-user / authentication  
+❌ Notifications (use OpenClaw's built-in delivery)
+
+*These can come in Phase 2 if needed.*
 
 ---
 
-## Example YAML File
+## Example YAML
 
 ```yaml
 # cardioclaw.yaml - Dave's Heartbeats
 
 heartbeats:
-  # Morning briefing (recurring)
+  # Morning briefing
   - name: Morning Briefing v3
     agent: beast
     schedule: "0 8 * * *"
@@ -236,12 +492,18 @@ heartbeats:
       Keep it under 6 sentences.
     delivery: telegram
 
-  # Evening wrap (recurring)
+  # Evening wrap
   - name: Evening Wrap-up v3
     agent: beast
     schedule: "0 19 * * 1-5"  # Weekdays at 7 PM
     prompt: "Evening wrap: what got done today, what's tomorrow"
     delivery: telegram
+
+  # Trello sync
+  - name: Trello Sync
+    schedule: "*/30 * * * *"  # Every 30 minutes
+    prompt: "Sync Trello cards to mission-state.md"
+    delivery: none
 
   # One-shot reminder
   - name: Gym Reminder
@@ -249,46 +511,24 @@ heartbeats:
     message: "Reminder: Gym at 6 PM! 🏋️"
     sessionTarget: main
     delivery: telegram
-
-  # Health check (no delivery)
-  - name: Session Health Check
-    schedule: "0 */2 * * *"  # Every 2 hours
-    prompt: "Check session health. Only alert if context over 80%."
-    delivery: none
 ```
 
 ---
 
 ## Success Metrics
 
-**For v1:** Does it work? Can you define heartbeats in YAML and they get created in OpenClaw?
+**Phase 1 Success:** Can Dave:
+1. Define heartbeats in YAML? ✅
+2. Run `cardioclaw sync` and see jobs created? ✅
+3. Open dashboard and see timeline? ✅
+4. Spot failing jobs at a glance? ✅
 
-**Next steps (v2):**
-- Add `cardioclaw status` (list all jobs)
-- Add conflict detection (warn if job already exists)
-- Add `cardioclaw rm <name>` (delete job)
-- Add dashboard (separate phase)
-
----
-
-## Build Checklist (for Wolverine)
-
-1. Create Node.js project with `package.json`
-2. Add dependencies: `js-yaml`, `commander`
-3. Implement YAML parser (`parser.js`)
-4. Implement schedule translation (cron expr, at timestamp)
-5. Implement payload translation (agentTurn vs systemEvent)
-6. Implement `cardioclaw sync` command
-7. Add error handling (YAML syntax errors, missing fields)
-8. Test with example YAML (create 3-4 test jobs)
-9. Write README with installation + usage
-10. Push to GitHub, publish to npm
+**Phase 2 Goals:**
+- Edit jobs via dashboard UI
+- Conflict resolution on sync
+- Historical run analytics
+- Bulk operations (disable all, export)
 
 ---
 
-**Estimated Build Time:** 4-6 hours  
-**Deployment:** npm package or standalone script
-
----
-
-*This is the Antfarm way: simple, contained, shippable. Build it today, add features tomorrow.* 🫀
+*Antfarm-style simplicity: complete features, simple implementation. 3 days, 3 features, zero bloat.* 🫀

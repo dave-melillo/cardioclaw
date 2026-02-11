@@ -2,6 +2,8 @@
 
 const { Command } = require('commander');
 const { sync } = require('../lib/sync');
+const { status } = require('../lib/status');
+const { discover } = require('../lib/discovery');
 const packageJson = require('../package.json');
 
 const program = new Command();
@@ -18,6 +20,26 @@ program
   .option('--dry-run', 'Show what would be created without executing')
   .action((options) => {
     sync(options);
+  });
+
+program
+  .command('status')
+  .description('Show all heartbeats and system health')
+  .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
+  .option('--no-refresh', 'Skip discovery refresh')
+  .action((options) => {
+    status(options);
+  });
+
+program
+  .command('discover')
+  .description('Discover and refresh all OpenClaw cron jobs')
+  .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
+  .action((options) => {
+    const configPath = options.config;
+    console.log('');
+    discover(configPath);
+    console.log('✓ Discovery complete\n');
   });
 
 program.parse(process.argv);

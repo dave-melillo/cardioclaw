@@ -9,12 +9,18 @@
   "scripts": {
     "test": "node bin/cardioclaw.js sync --config examples/cardioclaw.yaml"
   },
-  "keywords": ["openclaw", "cron", "heartbeat", "yaml"],
+  "keywords": [
+    "openclaw",
+    "cron",
+    "heartbeat",
+    "yaml"
+  ],
   "author": "Dave Melillo",
   "license": "MIT",
   "dependencies": {
-    "js-yaml": "^4.1.0",
-    "commander": "^12.0.0"
+    "better-sqlite3": "^12.6.2",
+    "commander": "^12.0.0",
+    "js-yaml": "^4.1.0"
   },
   "engines": {
     "node": ">=16.0.0"
