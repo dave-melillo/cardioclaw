@@ -4,6 +4,7 @@ const { Command } = require('commander');
 const { sync } = require('../lib/sync');
 const { status } = require('../lib/status');
 const { discover } = require('../lib/discovery');
+const { importJobs } = require('../lib/import');
 const { startDashboard } = require('../lib/server');
 const packageJson = require('../package.json');
 
@@ -50,6 +51,15 @@ program
   .option('-p, --port <port>', 'Port number', '3333')
   .action((options) => {
     startDashboard(options);
+  });
+
+program
+  .command('import')
+  .description('Import existing OpenClaw cron jobs into cardioclaw.yaml')
+  .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
+  .option('--dry-run', 'Preview without writing changes')
+  .action((options) => {
+    importJobs(options);
   });
 
 program.parse(process.argv);

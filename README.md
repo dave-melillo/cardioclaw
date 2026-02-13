@@ -36,7 +36,30 @@ npm link
 
 ## Quick Start
 
-### 1. Create your heartbeats
+### Already have OpenClaw cron jobs?
+
+Import them into your YAML with one command:
+
+```bash
+cardioclaw import
+```
+
+```
+🔍 Fetching OpenClaw cron jobs...
+   Found 12 job(s)
+
+📊 Import summary:
+   → 12 new heartbeat(s) to add
+
+✅ Imported 12 heartbeat(s)
+   Written to: /Users/dave/.cardioclaw/cardioclaw.yaml
+```
+
+Now all your existing heartbeats are in one YAML file. Edit, review, and manage from there.
+
+---
+
+### Starting fresh? Create your heartbeats
 
 ```bash
 nano ~/.cardioclaw/cardioclaw.yaml
@@ -153,6 +176,7 @@ Timezone: America/New_York
 
 | Command | Description |
 |---------|-------------|
+| `cardioclaw import` | Import existing OpenClaw cron jobs into YAML |
 | `cardioclaw sync` | Read YAML, create OpenClaw cron jobs |
 | `cardioclaw status` | Show all heartbeats and system health |
 | `cardioclaw discover` | Refresh all OpenClaw cron jobs |
@@ -160,7 +184,7 @@ Timezone: America/New_York
 
 **Options:**
 - `-c, --config <path>` — Path to config file (default: `cardioclaw.yaml`)
-- `--dry-run` — Preview without creating jobs (sync only)
+- `--dry-run` — Preview without making changes (import/sync)
 - `-p, --port <port>` — Dashboard port (default: 3333)
 
 ---
