@@ -261,6 +261,37 @@ heartbeats_completed:
   model: opus
 ```
 
+### Conversational Pipelines
+
+Chain multiple tasks with natural language — no special syntax needed:
+
+```yaml
+- name: Weekly Report Pipeline
+  schedule: "0 9 * * 1"
+  prompt: |
+    Run the weekly report pipeline:
+    1. First, run scripts/gather-metrics.sh
+    2. Then, run scripts/analyze-data.py
+    3. Finally, summarize the results and send to Telegram
+    
+    If any step fails, stop and report the error.
+  delivery: telegram
+```
+
+The agent understands "first... then... finally" and executes sequentially. No special parsing required — just natural language.
+
+### Auto-Sync (Recommended Default)
+
+Keep your YAML in sync with OpenClaw cron jobs:
+
+```yaml
+- name: CardioClaw Auto-Sync
+  schedule: "*/30 * * * *"
+  prompt: "Run cardioclaw import to sync any new OpenClaw cron jobs into the YAML file. No need to report back unless there are errors."
+```
+
+This ensures jobs created via `openclaw cron add` are automatically imported into your YAML.
+
 ### Execution History
 
 Track when heartbeats actually ran (vs when they were scheduled):
