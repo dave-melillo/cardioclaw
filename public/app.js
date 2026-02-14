@@ -4,6 +4,7 @@ const state = {
   currentView: 'hourly',
   currentDate: new Date(),
   heartbeats: [],
+  occurrences: [],
   status: {},
   runs: {},
   lastSync: null,
@@ -32,6 +33,13 @@ async function loadRuns(jobId) {
   const data = await fetchJSON(`/api/runs?job_id=${jobId}&limit=20`);
   state.runs[jobId] = data.runs || [];
   return state.runs[jobId];
+}
+
+async function loadOccurrences(startDate, endDate) {
+  const start = startDate.toISOString();
+  const end = endDate.toISOString();
+  const data = await fetchJSON(`/api/occurrences?start=${start}&end=${end}`);
+  state.occurrences = data.occurrences || [];
 }
 
 async function refreshAll() {
@@ -155,25 +163,54 @@ function getJobsForDate(date) {
 }
 
 function getJobsForHour(date, hour) {
-  return state.heartbeats.filter(job => {
+  const jobsInHour = new Map();
+  
+  // Check historical runs and immediate next runs
+  for (const job of state.heartbeats) {
     // Check if job ran in this hour
     if (job.last_run_at) {
       const lastRun = new Date(job.last_run_at);
-      if (isSameDay(lastRun, date) && lastRun.getHours() === hour) return true;
+      if (isSameDay(lastRun, date) && lastRun.getHours() === hour) {
+        jobsInHour.set(job.id, job);
+        continue;
+      }
     }
     
     // Check if job is scheduled to run in this hour
     if (job.next_run_at) {
       const nextRun = new Date(job.next_run_at);
-      if (isSameDay(nextRun, date) && nextRun.getHours() === hour) return true;
+      if (isSameDay(nextRun, date) && nextRun.getHours() === hour) {
+        jobsInHour.set(job.id, job);
+        continue;
+      }
     }
-    
-    return false;
-  });
+  }
+  
+  // Check occurrences (for future dates)
+  for (const occ of state.occurrences) {
+    const occDate = new Date(occ.timestamp);
+    if (isSameDay(occDate, date) && occDate.getHours() === hour) {
+      // Find the job in heartbeats
+      const job = state.heartbeats.find(j => j.id === occ.jobId);
+      if (job) {
+        jobsInHour.set(job.id, job);
+      }
+    }
+  }
+  
+  return Array.from(jobsInHour.values());
 }
 
 // View Renderers
-function renderHourlyView() {
+async function renderHourlyView() {
+  // Load occurrences for this day
+  const startOfDay = new Date(state.currentDate);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(state.currentDate);
+  endOfDay.setHours(23, 59, 59, 999);
+  
+  await loadOccurrences(startOfDay, endOfDay);
+  
   const jobs = getJobsForDate(state.currentDate);
   const jobsByHour = {};
   
@@ -267,9 +304,17 @@ function getJobStatus(job) {
   return { class: 'not-run', text: '(not run)' };
 }
 
-function renderCalendarView() {
+async function renderCalendarView() {
   const startOfWeek = new Date(state.currentDate);
   startOfWeek.setDate(state.currentDate.getDate() - state.currentDate.getDay());
+  startOfWeek.setHours(0, 0, 0, 0);
+  
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  endOfWeek.setHours(23, 59, 59, 999);
+  
+  // Load occurrences for the week
+  await loadOccurrences(startOfWeek, endOfWeek);
   
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(startOfWeek);
@@ -563,9 +608,9 @@ function switchView(view) {
   renderCurrentView();
 }
 
-function renderCurrentView() {
-  if (state.currentView === 'hourly') renderHourlyView();
-  else if (state.currentView === 'calendar') renderCalendarView();
+async function renderCurrentView() {
+  if (state.currentView === 'hourly') await renderHourlyView();
+  else if (state.currentView === 'calendar') await renderCalendarView();
   else if (state.currentView === 'list') renderListView();
 }
 
