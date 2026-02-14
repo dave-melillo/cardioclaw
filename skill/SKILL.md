@@ -17,10 +17,13 @@ YAML-based heartbeat orchestration for OpenClaw.
 ## Quick Reference
 
 ```bash
-cardioclaw status          # List all heartbeats + health
-cardioclaw sync            # Push YAML changes to OpenClaw
-cardioclaw import          # Pull existing cron jobs into YAML
-cardioclaw dashboard       # Web UI at localhost:3333
+cardioclaw status              # List all heartbeats + health
+cardioclaw sync                # Push YAML changes to OpenClaw
+cardioclaw sync --force        # Replace existing jobs
+cardioclaw remove "Name"       # Delete heartbeat from OpenClaw + YAML
+cardioclaw dedupe              # Remove duplicate jobs
+cardioclaw import              # Pull existing cron jobs into YAML
+cardioclaw dashboard           # Web UI at localhost:3333
 ```
 
 **Config location:** `~/.cardioclaw/cardioclaw.yaml`
@@ -100,10 +103,9 @@ cardioclaw status
 
 ### "Delete the gym reminder"
 ```bash
-# 1. Edit ~/.cardioclaw/cardioclaw.yaml, remove the entry
-# 2. Run:
-cardioclaw sync
+cardioclaw remove "Gym Reminder"
 ```
+Removes from both OpenClaw and YAML in one command.
 
 ### "Import my existing cron jobs"
 ```bash
