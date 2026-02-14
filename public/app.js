@@ -508,12 +508,41 @@ function updateHealthPanel() {
     .filter(j => j.next_run_at && j.next_run_at > Date.now())
     .sort((a, b) => a.next_run_at - b.next_run_at)[0];
   
-  document.getElementById('health-active').textContent = `✓ ${active} active`;
-  document.getElementById('health-failing').textContent = `✗ ${failing} failing`;
+  // Calculate "BPM" (jobs per minute) from recent activity
+  const now = Date.now();
+  const recentRuns = state.heartbeats.filter(j => 
+    j.last_run_at && (now - j.last_run_at < 60000) // Last minute
+  ).length;
+  
+  // Calculate success rate from all runs
+  const allRuns = Object.values(state.runs).flat();
+  const totalRuns = allRuns.length;
+  const successfulRuns = allRuns.filter(r => r.status === 'ok').length;
+  const successRate = totalRuns > 0 ? Math.round((successfulRuns / totalRuns) * 100) : 0;
+  
+  // Update header BPM
+  document.getElementById('live-bpm').textContent = recentRuns || '--';
+  
+  // Update header status
+  const statusEl = document.getElementById('header-status');
+  if (failing > 0) {
+    statusEl.textContent = '[ALERT]';
+    statusEl.style.color = 'var(--status-error)';
+  } else if (active > 0) {
+    statusEl.textContent = '[HEALTHY]';
+    statusEl.style.color = 'var(--status-ok)';
+  } else {
+    statusEl.textContent = '[IDLE]';
+    statusEl.style.color = 'var(--text-dim)';
+  }
+  
+  // Update health panel
+  document.getElementById('health-active').textContent = `❤️ ${active} active`;
+  document.getElementById('health-failing').textContent = `💔 ${failing} failing`;
   document.getElementById('health-next').textContent = nextJob 
     ? `⏱ Next: ${nextJob.name} ${formatRelativeTime(nextJob.next_run_at)}`
     : '⏱ Next: --';
-  document.getElementById('health-success').textContent = '💚 --'; // TODO: Calculate from runs
+  document.getElementById('health-success').textContent = `🦞 ${successRate}% uptime`;
   
   if (state.lastSync) {
     const ago = Math.floor((Date.now() - state.lastSync) / 1000);

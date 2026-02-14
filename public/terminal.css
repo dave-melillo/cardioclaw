@@ -1,18 +1,25 @@
-/* Terminal Aesthetic Theme */
+/* Terminal Aesthetic Theme - Dazzler v2 (Cardiogram Edition) */
 :root {
-  --bg-primary: #0a0a0a;
+  --bg-primary: #0a0e0d;        /* Deep black-green (terminal) */
   --bg-secondary: #1a1a1a;
   --bg-card: #151515;
   --border: #333333;
-  --border-bright: #00ff41;
-  --text-primary: #00ff41;
-  --text-secondary: #cccccc;
-  --text-dim: #666666;
-  --status-ok: #00ff41;
-  --status-error: #ff073a;
-  --status-warn: #ffd700;
-  --status-info: #00ffff;
-  --status-disabled: #666666;
+  --border-bright: #00ff41;     /* Matrix green */
+  --grid-subtle: #1a3a2e;       /* ECG paper grid */
+  
+  --text-primary: #00ff41;      /* Matrix green (healthy) */
+  --text-secondary: #a8f5a0;    /* Pale green (secondary) */
+  --text-dim: #3d4f47;          /* Muted green-gray */
+  
+  --status-ok: #00ff41;         /* Healthy green */
+  --status-error: #ff1744;      /* Danger red */
+  --status-warn: #ffb300;       /* Warning amber */
+  --status-info: #00ffcc;       /* Cyan-teal (ECG) */
+  --status-disabled: #3d4f47;   /* Inactive gray-green */
+  
+  --heart-red: #ff3366;         /* Heart/BPM accent */
+  --heart-pulse: #ff6b9d;       /* Pulse animation */
+  --ecg-cyan: #00ffcc;          /* ECG waveform */
 }
 
 * {
@@ -56,6 +63,35 @@ body {
   letter-spacing: 0.1em;
 }
 
+.health-indicator {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.bpm-display {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--heart-red);
+  letter-spacing: 0.05em;
+}
+
+#live-bpm {
+  font-size: 1.3rem;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+.status-text {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+}
+
 .view-switcher {
   display: flex;
   gap: 0.5rem;
@@ -91,6 +127,11 @@ body {
   flex: 1;
   padding: 1.5rem;
   overflow-y: auto;
+  background-image: 
+    linear-gradient(var(--grid-subtle) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-subtle) 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-position: -1px -1px;
 }
 
 /* ASCII Box */
@@ -212,11 +253,11 @@ body {
 }
 
 .job-status.upcoming {
-  color: var(--status-info);
+  color: var(--ecg-cyan);
 }
 
 .job-status.not-run {
-  color: var(--text-dim);
+  color: var(--status-disabled);
 }
 
 /* Calendar View */
@@ -424,6 +465,19 @@ body {
   color: var(--text-secondary);
 }
 
+#health-active {
+  color: var(--status-ok);
+}
+
+#health-failing {
+  color: var(--status-error);
+}
+
+.success-rate {
+  color: var(--heart-pulse);
+  font-weight: 500;
+}
+
 .health-actions {
   display: flex;
   align-items: center;
@@ -587,8 +641,13 @@ body {
 @media (max-width: 768px) {
   .header {
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.75rem;
     align-items: flex-start;
+  }
+
+  .health-indicator {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .view-switcher {
@@ -598,6 +657,8 @@ body {
   .view-btn {
     flex: 1;
     text-align: center;
+    font-size: 0.8rem;
+    padding: 0.4rem 0.6rem;
   }
 
   .calendar-grid {

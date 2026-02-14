@@ -13,7 +13,11 @@
   <div id="app">
     <!-- Header -->
     <div class="header">
-      <div class="logo">🦞 CARDIOCLAW DASHBOARD</div>
+      <div class="logo">🦞 CARDIOCLAW</div>
+      <div class="health-indicator">
+        <span id="header-bpm" class="bpm-display">❤️ <span id="live-bpm">--</span> BPM</span>
+        <span id="header-status" class="status-text">[MONITORING]</span>
+      </div>
       <div class="view-switcher">
         <button class="view-btn active" data-view="hourly">HOURLY</button>
         <button class="view-btn" data-view="calendar">CALENDAR</button>
@@ -29,10 +33,10 @@
     <!-- Health Panel (Footer) -->
     <div class="health-panel">
       <div class="health-stats">
-        <span id="health-active">✓ 0 active</span> •
-        <span id="health-failing">✗ 0 failing</span> •
+        <span id="health-active">❤️ 0 active</span> •
+        <span id="health-failing">💔 0 failing</span> •
         <span id="health-next">⏱ Next: --</span> •
-        <span id="health-success">💚 --%</span>
+        <span id="health-success" class="success-rate">🦞 --% uptime</span>
       </div>
       <div class="health-actions">
         <span id="last-sync">Last sync: --</span>
