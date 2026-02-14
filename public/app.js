@@ -124,6 +124,20 @@ function getJobsForDate(date) {
   const isToday = isSameDay(date, today);
   
   return state.heartbeats.filter(job => {
+    const schedule = parseSchedule(job.schedule);
+    
+    // For one-shot jobs, check exact date match
+    if (schedule.type === 'oneshot') {
+      return isSameDay(schedule.time, date);
+    }
+    
+    // For recurring jobs, show all active ones
+    // (Without a full cron parser, we can't determine exact days)
+    // Show active recurring jobs on all dates being viewed
+    if (schedule.type === 'recurring' && job.status === 'active') {
+      return true;
+    }
+    
     // Check if job ran on this date
     if (job.last_run_at) {
       const lastRun = new Date(job.last_run_at);
@@ -134,15 +148,6 @@ function getJobsForDate(date) {
     if (job.next_run_at) {
       const nextRun = new Date(job.next_run_at);
       if (isSameDay(nextRun, date)) return true;
-    }
-    
-    // For recurring jobs viewing today, show active ones
-    // (They may have multiple runs throughout the day)
-    if (isToday) {
-      const schedule = parseSchedule(job.schedule);
-      if (schedule.type === 'recurring' && job.status === 'active') {
-        return true;
-      }
     }
     
     return false;
@@ -310,23 +315,7 @@ function renderCalendarView() {
 function renderCalendarDay(date) {
   const today = new Date();
   const isToday = isSameDay(date, today);
-  
-  // Get jobs for this day (including recurring)
-  const jobs = state.heartbeats.filter(job => {
-    const schedule = parseSchedule(job.schedule);
-    
-    // For one-shot jobs, check exact date
-    if (schedule.type === 'oneshot') {
-      return isSameDay(schedule.time, date);
-    }
-    
-    // For recurring jobs, show them (simplified - would need cron parser for accuracy)
-    if (schedule.type === 'recurring' && job.status === 'active') {
-      return true;
-    }
-    
-    return false;
-  });
+  const jobs = getJobsForDate(date);
   
   return `
     <div class="calendar-day ${isToday ? 'today' : ''}">
@@ -337,18 +326,32 @@ function renderCalendarDay(date) {
         ${date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' })}
       </div>
       <div class="day-jobs">
-        ${jobs.slice(0, 5).map(job => {
-          // For display, use next_run_at if available
-          const hour = job.next_run_at ? getHourFromTimestamp(job.next_run_at) : '--';
+        ${jobs.slice(0, 8).map(job => {
           const status = getJobStatus(job);
+          const schedule = parseSchedule(job.schedule);
+          
+          // Try to determine display time
+          let displayTime = '';
+          if (schedule.type === 'oneshot') {
+            displayTime = schedule.time.getHours();
+          } else if (job.next_run_at && isSameDay(new Date(job.next_run_at), date)) {
+            displayTime = getHourFromTimestamp(job.next_run_at);
+          } else if (job.last_run_at && isSameDay(new Date(job.last_run_at), date)) {
+            displayTime = getHourFromTimestamp(job.last_run_at);
+          } else {
+            // Recurring job, don't show specific time
+            displayTime = null;
+          }
+          
           return `
             <div class="calendar-job" data-job-id="${job.id}">
-              <span class="time">${typeof hour === 'number' ? String(hour).padStart(2, '0') + ':00' : hour}</span>
+              ${displayTime !== null ? `<span class="time">${String(displayTime).padStart(2, '0')}:00</span>` : ''}
               <span class="${status.class}">🦞</span>
+              <span class="text-dim" style="font-size: 0.7rem; margin-left: 0.2rem;">${job.name.substring(0, 12)}</span>
             </div>
           `;
         }).join('')}
-        ${jobs.length > 5 ? `<div class="text-dim" style="font-size: 0.75rem;">+${jobs.length - 5} more</div>` : ''}
+        ${jobs.length > 8 ? `<div class="text-dim" style="font-size: 0.7rem;">+${jobs.length - 8} more</div>` : ''}
       </div>
     </div>
   `;
