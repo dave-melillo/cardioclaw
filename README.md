@@ -307,18 +307,37 @@ Last 20 runs:
 
 ## Dashboard
 
-Timeline view of all scheduled heartbeats with system health monitoring.
+**Terminal-aesthetic UI** with three views for monitoring heartbeats.
+
+```bash
+cardioclaw dashboard         # Start at localhost:3333
+cardioclaw dashboard -p 8080 # Custom port
+```
+
+**Three Views:**
+- **Hourly** — 24-hour timeline showing today's heartbeats (00:00-23:59)
+- **Calendar** — 7-day week view for long-term scheduling
+- **List** — Table with success rates, filters, and sorting
+
+**Visual Style:**
+- Dark theme (#0a0a0a background, Matrix green #00ff41 accents)
+- Monospace font (Fira Code)
+- ASCII box-drawing characters (│ ─ ┌ ┐)
+- Lobster icons (🦞) everywhere
+- Color-coded status: green (ok), red (error), cyan (upcoming)
 
 **Features:**
-- Week-view timeline, color-coded by agent
-- System health panel (active, failing, managed counts)
-- Next run countdown
+- Click any job → Detail modal with execution history
+- System health panel (footer KPIs)
 - Auto-refresh every 30 seconds
 - Mobile responsive
+- Keyboard shortcuts: `1`/`2`/`3` (views), `r` (refresh), `Esc` (close modal)
 
 **API Endpoints:**
 - `GET /api/heartbeats` — List all jobs
 - `GET /api/status` — System health summary
+- `GET /api/runs?job_id=<id>` — Execution history
+- `GET /api/runs/summary` — Success rates (last 7 days)
 - `POST /api/refresh` — Trigger discovery refresh
 
 ---
