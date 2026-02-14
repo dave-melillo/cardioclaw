@@ -120,18 +120,50 @@ function parseSchedule(scheduleStr) {
 }
 
 function getJobsForDate(date) {
+  const today = new Date();
+  const isToday = isSameDay(date, today);
+  
   return state.heartbeats.filter(job => {
-    if (!job.next_run_at) return false;
-    const nextRun = new Date(job.next_run_at);
-    return isSameDay(nextRun, date);
+    // Check if job ran on this date
+    if (job.last_run_at) {
+      const lastRun = new Date(job.last_run_at);
+      if (isSameDay(lastRun, date)) return true;
+    }
+    
+    // Check if job is scheduled to run on this date
+    if (job.next_run_at) {
+      const nextRun = new Date(job.next_run_at);
+      if (isSameDay(nextRun, date)) return true;
+    }
+    
+    // For recurring jobs viewing today, show active ones
+    // (They may have multiple runs throughout the day)
+    if (isToday) {
+      const schedule = parseSchedule(job.schedule);
+      if (schedule.type === 'recurring' && job.status === 'active') {
+        return true;
+      }
+    }
+    
+    return false;
   });
 }
 
 function getJobsForHour(date, hour) {
   return state.heartbeats.filter(job => {
-    if (!job.next_run_at) return false;
-    const nextRun = new Date(job.next_run_at);
-    return isSameDay(nextRun, date) && nextRun.getHours() === hour;
+    // Check if job ran in this hour
+    if (job.last_run_at) {
+      const lastRun = new Date(job.last_run_at);
+      if (isSameDay(lastRun, date) && lastRun.getHours() === hour) return true;
+    }
+    
+    // Check if job is scheduled to run in this hour
+    if (job.next_run_at) {
+      const nextRun = new Date(job.next_run_at);
+      if (isSameDay(nextRun, date) && nextRun.getHours() === hour) return true;
+    }
+    
+    return false;
   });
 }
 
@@ -204,19 +236,29 @@ function renderHourJobs(hour, jobs) {
 function getJobStatus(job) {
   const now = Date.now();
   
-  if (job.last_run_at && job.last_run_at > now - 86400000) {
-    // Ran in last 24h
-    if (job.last_status === 'ok') {
-      return { class: 'ok', text: `✓ ${formatDuration(job.last_run_at - (job.last_run_at - 10000))}` };
+  // Check if job ran recently (within selected day or last 24h)
+  if (job.last_run_at) {
+    const lastRun = new Date(job.last_run_at);
+    const timeSinceRun = now - job.last_run_at;
+    
+    // If ran within last 24h, show completion status
+    if (timeSinceRun < 86400000) {
+      // last_status is null when job succeeded (only set on error)
+      if (job.last_error || job.last_status === 'error') {
+        return { class: 'error', text: `✗ ${job.last_error || 'error'}` };
+      }
+      // Show simple checkmark (duration not available on job object)
+      return { class: 'ok', text: '✓ ok' };
     }
-    return { class: 'error', text: `✗ ${job.last_error || 'error'}` };
   }
   
+  // Check if job is scheduled to run in future
   if (job.next_run_at && job.next_run_at > now) {
     const timeUntil = formatRelativeTime(job.next_run_at);
     return { class: 'upcoming', text: `⏱ ${timeUntil}` };
   }
   
+  // Job hasn't run or is past due
   return { class: 'not-run', text: '(not run)' };
 }
 
@@ -268,7 +310,23 @@ function renderCalendarView() {
 function renderCalendarDay(date) {
   const today = new Date();
   const isToday = isSameDay(date, today);
-  const jobs = getJobsForDate(date);
+  
+  // Get jobs for this day (including recurring)
+  const jobs = state.heartbeats.filter(job => {
+    const schedule = parseSchedule(job.schedule);
+    
+    // For one-shot jobs, check exact date
+    if (schedule.type === 'oneshot') {
+      return isSameDay(schedule.time, date);
+    }
+    
+    // For recurring jobs, show them (simplified - would need cron parser for accuracy)
+    if (schedule.type === 'recurring' && job.status === 'active') {
+      return true;
+    }
+    
+    return false;
+  });
   
   return `
     <div class="calendar-day ${isToday ? 'today' : ''}">
@@ -280,11 +338,12 @@ function renderCalendarDay(date) {
       </div>
       <div class="day-jobs">
         ${jobs.slice(0, 5).map(job => {
-          const hour = getHourFromTimestamp(job.next_run_at);
+          // For display, use next_run_at if available
+          const hour = job.next_run_at ? getHourFromTimestamp(job.next_run_at) : '--';
           const status = getJobStatus(job);
           return `
             <div class="calendar-job" data-job-id="${job.id}">
-              <span class="time">${String(hour).padStart(2, '0')}:00</span>
+              <span class="time">${typeof hour === 'number' ? String(hour).padStart(2, '0') + ':00' : hour}</span>
               <span class="${status.class}">🦞</span>
             </div>
           `;
@@ -358,15 +417,25 @@ function formatSchedule(scheduleStr) {
 }
 
 function renderStatusBadge(job) {
-  if (job.last_status === 'ok') {
-    return '<span class="text-ok">✓ ok</span>';
-  }
-  if (job.last_status === 'error') {
+  // Check if job has error
+  if (job.last_error || job.last_status === 'error') {
     return '<span class="text-error">✗ error</span>';
   }
+  
+  // If job ran recently (has last_run_at), consider it successful
+  if (job.last_run_at) {
+    const timeSinceRun = Date.now() - job.last_run_at;
+    if (timeSinceRun < 86400000) { // Within last 24h
+      return '<span class="text-ok">✓ ok</span>';
+    }
+  }
+  
+  // Check if disabled
   if (job.status === 'disabled') {
     return '<span class="text-dim">⏸ disabled</span>';
   }
+  
+  // Otherwise pending/scheduled
   return '<span class="text-dim">⏱ pending</span>';
 }
 
