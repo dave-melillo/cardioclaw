@@ -7,6 +7,7 @@ const { discover } = require('../lib/discovery');
 const { importJobs } = require('../lib/import');
 const { startDashboard } = require('../lib/server');
 const { dedupe } = require('../lib/dedupe');
+const { remove } = require('../lib/remove');
 const packageJson = require('../package.json');
 
 const program = new Command();
@@ -70,6 +71,15 @@ program
   .option('--dry-run', 'Preview without removing')
   .action((options) => {
     dedupe(options);
+  });
+
+program
+  .command('remove <name>')
+  .description('Remove a heartbeat from OpenClaw and YAML')
+  .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
+  .option('--dry-run', 'Preview without removing')
+  .action((name, options) => {
+    remove(name, options);
   });
 
 program.parse(process.argv);
