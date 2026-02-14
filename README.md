@@ -1,6 +1,12 @@
-# 🫀 CardioClaw
+<p align="center">
+  <img src="assets/logo.png" alt="CardioClaw" width="300">
+</p>
 
-**YAML-based heartbeat orchestration for OpenClaw.**
+<h1 align="center">🫀 CardioClaw</h1>
+
+<p align="center">
+  <strong>YAML-based heartbeat orchestration for OpenClaw.</strong>
+</p>
 
 Define recurring tasks in clean YAML, sync to OpenClaw cron jobs with one command, and visualize everything on a timeline dashboard.
 
@@ -339,6 +345,18 @@ Last 20 runs:
 ## Dashboard
 
 **Terminal-aesthetic UI** with three views for monitoring heartbeats.
+
+<p align="center">
+  <img src="assets/screenshot-hourly.png" alt="Hourly View" width="800">
+</p>
+
+<p align="center">
+  <img src="assets/screenshot-calendar.png" alt="Calendar View" width="800">
+</p>
+
+<p align="center">
+  <img src="assets/screenshot-list.png" alt="List View" width="800">
+</p>
 
 ```bash
 cardioclaw dashboard         # Start at localhost:3333
