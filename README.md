@@ -181,11 +181,14 @@ Timezone: America/New_York
 | `cardioclaw status` | Show all heartbeats and system health |
 | `cardioclaw discover` | Refresh all OpenClaw cron jobs |
 | `cardioclaw dashboard` | Start web dashboard at localhost:3333 |
+| `cardioclaw prune` | Remove old completed one-shot heartbeats from YAML |
 
 **Options:**
 - `-c, --config <path>` — Path to config file (default: `cardioclaw.yaml`)
-- `--dry-run` — Preview without making changes (import/sync)
+- `--dry-run` — Preview without making changes (import/sync/prune)
 - `-p, --port <port>` — Dashboard port (default: 3333)
+- `--days <n>` — Remove completed jobs older than N days (prune)
+- `--before <date>` — Remove completed jobs before date YYYY-MM-DD (prune)
 
 ---
 
@@ -222,6 +225,21 @@ Timezone: America/New_York
   message: "Reminder: Gym at 6 PM! 🏋️"
   sessionTarget: main
   delivery: telegram
+```
+
+**One-Shot Lifecycle:**
+1. **Before execution:** Shows in `cardioclaw status` under "Upcoming One-Shots"
+2. **After execution:** Automatically moved to `heartbeats_completed:` section in YAML
+3. **Cleanup:** Run `cardioclaw prune --days 30` to remove old completed entries
+
+**Example of auto-archived one-shot:**
+```yaml
+heartbeats_completed:
+  - name: Gym Reminder
+    schedule: at 2026-02-15 18:00
+    executed_at: 2026-02-15T18:00:05-05:00
+    status: ok
+    message: "Reminder: Gym at 6 PM! 🏋️"
 ```
 
 ### Weekly Review

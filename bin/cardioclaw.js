@@ -8,6 +8,7 @@ const { importJobs } = require('../lib/import');
 const { startDashboard } = require('../lib/server');
 const { dedupe } = require('../lib/dedupe');
 const { remove } = require('../lib/remove');
+const { prune } = require('../lib/prune');
 const packageJson = require('../package.json');
 
 const program = new Command();
@@ -80,6 +81,17 @@ program
   .option('--dry-run', 'Preview without removing')
   .action((name, options) => {
     remove(name, options);
+  });
+
+program
+  .command('prune')
+  .description('Remove old completed one-shot heartbeats from YAML')
+  .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
+  .option('--days <n>', 'Remove completed jobs older than N days')
+  .option('--before <date>', 'Remove completed jobs before date (YYYY-MM-DD)')
+  .option('--dry-run', 'Preview without removing')
+  .action((options) => {
+    prune(options);
   });
 
 program.parse(process.argv);
