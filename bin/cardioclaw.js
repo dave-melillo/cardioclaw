@@ -9,6 +9,7 @@ const { startDashboard } = require('../lib/server');
 const { dedupe } = require('../lib/dedupe');
 const { remove } = require('../lib/remove');
 const { prune } = require('../lib/prune');
+const { showRuns } = require('../lib/runs');
 const packageJson = require('../package.json');
 
 const program = new Command();
@@ -92,6 +93,18 @@ program
   .option('--dry-run', 'Preview without removing')
   .action((options) => {
     prune(options);
+  });
+
+program
+  .command('runs [job-name]')
+  .description('Show execution history for a heartbeat')
+  .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
+  .option('--all', 'Show runs for all jobs')
+  .option('--limit <n>', 'Number of runs to show', '20')
+  .option('--no-refresh', 'Skip discovery refresh')
+  .option('-v, --verbose', 'Show error messages')
+  .action((jobName, options) => {
+    showRuns(jobName, options);
   });
 
 program.parse(process.argv);

@@ -182,6 +182,7 @@ Timezone: America/New_York
 | `cardioclaw discover` | Refresh all OpenClaw cron jobs |
 | `cardioclaw dashboard` | Start web dashboard at localhost:3333 |
 | `cardioclaw prune` | Remove old completed one-shot heartbeats from YAML |
+| `cardioclaw runs [job-name]` | Show execution history for a heartbeat |
 
 **Options:**
 - `-c, --config <path>` — Path to config file (default: `cardioclaw.yaml`)
@@ -189,6 +190,10 @@ Timezone: America/New_York
 - `-p, --port <port>` — Dashboard port (default: 3333)
 - `--days <n>` — Remove completed jobs older than N days (prune)
 - `--before <date>` — Remove completed jobs before date YYYY-MM-DD (prune)
+- `--all` — Show runs for all jobs (runs)
+- `--limit <n>` — Number of runs to show (runs, default: 20)
+- `--no-refresh` — Skip discovery refresh (runs)
+- `-v, --verbose` — Show error messages (runs)
 
 ---
 
@@ -255,6 +260,48 @@ heartbeats_completed:
   delivery: telegram
   model: opus
 ```
+
+### Execution History
+
+Track when heartbeats actually ran (vs when they were scheduled):
+
+```bash
+# Show last 20 runs for specific job
+cardioclaw runs "Morning Briefing"
+
+# Show last 10 runs for all jobs
+cardioclaw runs --all --limit 10
+
+# Show runs with error details
+cardioclaw runs "Evening Wrap-up" --verbose
+```
+
+**Example output:**
+```
+🫀 Execution History: Morning Briefing
+
+Last 20 runs:
+
+  Feb 14, 08:00 AM   ✓ ok       1m 30s
+  Feb 13, 08:00 AM   ✓ ok       1m 42s
+  Feb 12, 08:00 AM   ✓ ok       1m 31s
+  Feb 11, 08:00 AM   ✓ ok       1m 13s
+  Feb 10, 08:00 AM   ✗ error    2m 0s
+  ...
+
+────────────────────────────────────────────────────────────
+  Success rate: 95% (19/20)
+  Avg duration: 1m 26s
+```
+
+**Automatic capture:**
+- Runs are captured passively during `sync`/`status`
+- Stores: timestamp, status (ok/error), duration, error message
+- Retention: Last 100 runs per job OR 90 days (auto-pruned on sync)
+
+**API endpoints:**
+- `GET /api/runs?job_id=<id>&limit=50` — Get run history
+- `GET /api/runs/summary` — Get success rates (last 7 days)
 
 ---
 
