@@ -184,11 +184,17 @@ schedule: at 2026-02-15 14:00 America/Los_Angeles  # Full IANA timezone
 
 ### Timezone Handling
 
-All times are interpreted in **America/New_York** by default. Override with:
+All times are interpreted in your **system's local timezone** by default. Override with:
 
 1. **Global default** — set `defaults.timezone` at the top of your YAML
 2. **Per-heartbeat** — add `tz:` to any heartbeat
 3. **Inline** — append timezone to the schedule string (e.g., `at 2026-02-15 18:00 UTC`)
+
+```yaml
+# Example: Set timezone for all heartbeats
+defaults:
+  timezone: America/New_York
+```
 
 ---
 
