@@ -1,6 +1,6 @@
 {
   "name": "cardioclaw",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "YAML to OpenClaw cron sync tool",
   "main": "index.js",
   "bin": {
@@ -23,7 +23,8 @@
     "cors": "^2.8.6",
     "cron-parser": "^5.5.0",
     "express": "^5.2.1",
-    "js-yaml": "^4.1.0"
+    "js-yaml": "^4.1.0",
+    "luxon": "^3.7.2"
   },
   "engines": {
     "node": ">=16.0.0"
