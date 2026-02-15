@@ -20,7 +20,7 @@ Inspired by [Antfarm](https://antfarm.cool) — simple, self-contained, shippabl
 curl -fsSL https://raw.githubusercontent.com/dave-melillo/cardioclaw/main/scripts/install.sh | bash
 ```
 
-v0.1.0
+v0.2.0
 
 Paste in your terminal, or ask your OpenClaw to run it.
 
@@ -144,6 +144,10 @@ Open http://localhost:3333 to see the timeline.
 ## YAML Schema
 
 ```yaml
+# Optional: Global defaults
+defaults:
+  timezone: America/New_York  # Default timezone for all schedules
+
 heartbeats:
   - name: string              # Required: Unique job name
     schedule: string          # Required: Cron expr OR "at YYYY-MM-DD HH:MM"
@@ -153,6 +157,7 @@ heartbeats:
     message: string           # For systemEvent — injects text into main session
     
     # Optional:
+    tz: string                # Per-heartbeat timezone override
     delivery: string          # "telegram" | "discord" | "none" (default: none)
     sessionTarget: string     # "isolated" | "main" (auto-detected from payload)
     model: string             # Model override (e.g., "opus", "sonnet")
@@ -171,10 +176,19 @@ schedule: "0 9 * * MON"      # Mondays at 9 AM
 
 **One-shot (absolute time):**
 ```yaml
-schedule: at 2026-02-15 18:00   # Feb 15, 2026 at 6 PM
+schedule: at 2026-02-15 18:00           # Uses default timezone
+schedule: at 2026-02-15 18:00 UTC       # Explicit UTC
+schedule: at 2026-02-15 18:00 EST       # Explicit timezone
+schedule: at 2026-02-15 14:00 America/Los_Angeles  # Full IANA timezone
 ```
 
-Timezone: America/New_York
+### Timezone Handling
+
+All times are interpreted in **America/New_York** by default. Override with:
+
+1. **Global default** — set `defaults.timezone` at the top of your YAML
+2. **Per-heartbeat** — add `tz:` to any heartbeat
+3. **Inline** — append timezone to the schedule string (e.g., `at 2026-02-15 18:00 UTC`)
 
 ---
 
