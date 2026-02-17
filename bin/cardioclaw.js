@@ -10,6 +10,7 @@ const { dedupe } = require('../lib/dedupe');
 const { remove } = require('../lib/remove');
 const { prune } = require('../lib/prune');
 const { showRuns } = require('../lib/runs');
+const { init } = require('../lib/init');
 const packageJson = require('../package.json');
 
 const program = new Command();
@@ -18,6 +19,11 @@ program
   .name('cardioclaw')
   .description('YAML to OpenClaw cron sync tool')
   .version(packageJson.version);
+
+program
+  .command('init')
+  .description('Create a starter cardioclaw.yaml with detected timezone')
+  .action(() => init());
 
 program
   .command('sync')
