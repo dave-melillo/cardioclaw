@@ -4,7 +4,7 @@ set -e
 # CardioClaw Installer
 # Usage: curl -fsSL https://raw.githubusercontent.com/dave-melillo/cardioclaw/main/scripts/install.sh | bash
 
-VERSION="0.1.0"
+VERSION="0.2.0"
 REPO="https://github.com/dave-melillo/cardioclaw"
 INSTALL_DIR="$HOME/.cardioclaw"
 
@@ -15,14 +15,14 @@ echo ""
 
 # Check for Node.js
 if ! command -v node &> /dev/null; then
-    echo "❌ Node.js not found. Please install Node.js 16+ first."
+    echo "❌ Node.js not found. Please install Node.js 18+ first."
     echo "   https://nodejs.org/"
     exit 1
 fi
 
 NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
-if [ "$NODE_VERSION" -lt 16 ]; then
-    echo "❌ Node.js 16+ required. Found: $(node -v)"
+if [ "$NODE_VERSION" -lt 18 ]; then
+    echo "❌ Node.js 18+ required. Found: $(node -v)"
     exit 1
 fi
 echo "✓ Node.js $(node -v)"

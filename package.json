@@ -2,12 +2,13 @@
   "name": "cardioclaw",
   "version": "0.2.0",
   "description": "YAML to OpenClaw cron sync tool",
-  "main": "index.js",
+  "main": "bin/cardioclaw.js",
   "bin": {
     "cardioclaw": "./bin/cardioclaw.js"
   },
   "scripts": {
-    "test": "node bin/cardioclaw.js sync --config examples/cardioclaw.yaml"
+    "test": "node --test test/**/*.test.js",
+    "test:smoke": "node bin/cardioclaw.js sync --config examples/cardioclaw.yaml"
   },
   "keywords": [
     "openclaw",
@@ -27,6 +28,6 @@
     "luxon": "^3.7.2"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
   }
 }
