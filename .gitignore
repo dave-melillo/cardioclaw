@@ -1,4 +1,10 @@
 node_modules/
 *.log
+npm-debug.log*
 .DS_Store
 .env
+*.db
+coverage/
+.nyc_output
+cardioclaw.yaml
+test.yaml
