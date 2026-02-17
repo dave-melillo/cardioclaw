@@ -58,7 +58,7 @@ cardioclaw import
    → 12 new heartbeat(s) to add
 
 ✅ Imported 12 heartbeat(s)
-   Written to: /Users/dave/.cardioclaw/cardioclaw.yaml
+   Written to: ~/.cardioclaw/cardioclaw.yaml
 ```
 
 Now all your existing heartbeats are in one YAML file. Edit, review, and manage from there.
