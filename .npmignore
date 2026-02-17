@@ -1,0 +1,10 @@
+# Exclude development/internal files from npm publish
+docs/
+assets/
+test.yaml
+scripts/
+coverage/
+.nyc_output
+*.db
+.env
+.DS_Store
