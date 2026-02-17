@@ -3,7 +3,7 @@
 ## v2.1 - Dazzler UX Update (2026-02-14)
 
 **Designer:** Dazzler ✨  
-**Spec:** `/Users/dave/.openclaw/workspace-dazzler/cardioclaw-ux-direction.md`
+**Spec:** `~/.openclaw/workspace-dazzler/cardioclaw-ux-direction.md`
 
 ### Phase 1 Changes Implemented
 

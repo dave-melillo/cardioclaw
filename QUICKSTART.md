@@ -3,7 +3,7 @@
 ## 1. Install
 
 ```bash
-cd /Users/dave/clawd/cardioclaw
+cd ~/projects/cardioclaw
 npm install
 npm link
 ```
@@ -55,5 +55,7 @@ openclaw cron list
 
 ---
 
-**Built in:** ~3 hours  
+> **Note:** `cardioclaw sync` rewrites your YAML file to track completed one-shots.
+> YAML comments are not preserved across rewrites.
+
 **Status:** MVP complete ✓

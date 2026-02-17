@@ -279,7 +279,7 @@ function pruneRuns(db: Database, days = 90, keepPerJob = 100) {
 
 **Answer:** Not easily. OpenClaw cron jobs run in isolated sessions. Session transcripts are saved to:
 ```
-/Users/dave/.openclaw/agents/beast/sessions/{sessionId}.jsonl
+~/.openclaw/agents/beast/sessions/{sessionId}.jsonl
 ```
 
 **Phase 2 approach:** Store `session_id` in `runs` table (if available from `openclaw cron list`). User can manually inspect transcript.
