@@ -29,7 +29,9 @@
 }
 
 body {
-  font-family: 'Fira Code', 'JetBrains Mono', 'Courier New', monospace;
+  /* Use locally-installed monospace fonts; no external network requests */
+  font-family: 'Fira Code', 'JetBrains Mono', ui-monospace, 'Cascadia Mono', 'SF Mono',
+               'Menlo', 'Consolas', 'DejaVu Sans Mono', 'Courier New', monospace;
   background: var(--bg-primary);
   color: var(--text-secondary);
   font-size: 14px;
