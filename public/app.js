@@ -1,4 +1,19 @@
 // CardioClaw Dashboard v2 - Terminal Aesthetic
+
+/**
+ * HTML-escape a value before inserting into innerHTML.
+ * Always call this on any untrusted/database-sourced string.
+ */
+function esc(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
 // State
 const state = {
   currentView: 'hourly',
@@ -266,10 +281,10 @@ function renderHourJobs(hour, jobs) {
   return jobs.map(job => {
     const status = getJobStatus(job);
     return `
-      <div class="job-entry" data-job-id="${job.id}">
+      <div class="job-entry" data-job-id="${esc(job.id)}">
         <span>🦞</span>
-        <span class="job-name">${job.name}</span>
-        <span class="job-status ${status.class}">${status.text}</span>
+        <span class="job-name">${esc(job.name)}</span>
+        <span class="job-status ${esc(status.class)}">${esc(status.text)}</span>
       </div>
     `;
   }).join('');
@@ -287,6 +302,7 @@ function getJobStatus(job) {
     if (timeSinceRun < 86400000) {
       // last_status is null when job succeeded (only set on error)
       if (job.last_error || job.last_status === 'error') {
+        // esc() applied at render time in renderHourJobs / renderCalendarDay
         return { class: 'error', text: `✗ ${job.last_error || 'error'}` };
       }
       // Show simple checkmark (duration not available on job object)
@@ -389,10 +405,10 @@ function renderCalendarDay(date) {
           }
           
           return `
-            <div class="calendar-job" data-job-id="${job.id}">
-              ${displayTime !== null ? `<span class="time">${String(displayTime).padStart(2, '0')}:00</span>` : ''}
-              <span class="${status.class}">🦞</span>
-              <span class="text-dim" style="font-size: 0.7rem; margin-left: 0.2rem;">${job.name.substring(0, 12)}</span>
+            <div class="calendar-job" data-job-id="${esc(job.id)}">
+              ${displayTime !== null ? `<span class="time">${esc(String(displayTime).padStart(2, '0'))}:00</span>` : ''}
+              <span class="${esc(status.class)}">🦞</span>
+              <span class="text-dim" style="font-size: 0.7rem; margin-left: 0.2rem;">${esc(job.name.substring(0, 12))}</span>
             </div>
           `;
         }).join('')}
@@ -432,10 +448,10 @@ function renderListView() {
         </thead>
         <tbody>
           ${state.heartbeats.map(job => `
-            <tr data-job-id="${job.id}">
-              <td>🦞 ${job.name}</td>
-              <td>${formatSchedule(job.schedule)}</td>
-              <td>${formatRelativeTime(job.next_run_at)}</td>
+            <tr data-job-id="${esc(job.id)}">
+              <td>🦞 ${esc(job.name)}</td>
+              <td>${esc(formatSchedule(job.schedule))}</td>
+              <td>${esc(formatRelativeTime(job.next_run_at))}</td>
               <td>${renderStatusBadge(job)}</td>
             </tr>
           `).join('')}
@@ -467,7 +483,7 @@ function formatSchedule(scheduleStr) {
 function renderStatusBadge(job) {
   // Check if job has error
   if (job.last_error || job.last_status === 'error') {
-    return '<span class="text-error">✗ error</span>';
+    return `<span class="text-error">✗ ${esc(job.last_error || 'error')}</span>`;
   }
   
   // If job ran recently (has last_run_at), consider it successful
@@ -499,17 +515,17 @@ async function showJobDetail(jobId) {
     <div class="modal-section">
       <div class="modal-meta">
         <span class="modal-meta-label">Schedule:</span>
-        <span class="modal-meta-value">${formatSchedule(job.schedule)}</span>
+        <span class="modal-meta-value">${esc(formatSchedule(job.schedule))}</span>
         
         <span class="modal-meta-label">Status:</span>
-        <span class="modal-meta-value">${job.status}</span>
+        <span class="modal-meta-value">${esc(job.status)}</span>
         
         <span class="modal-meta-label">Next Run:</span>
-        <span class="modal-meta-value">${formatRelativeTime(job.next_run_at)}</span>
+        <span class="modal-meta-value">${esc(formatRelativeTime(job.next_run_at))}</span>
         
         <span class="modal-meta-label">Last Run:</span>
         <span class="modal-meta-value">
-          ${job.last_run_at ? formatTime(job.last_run_at) + ' (' + renderStatusBadge(job) + ')' : 'Never'}
+          ${job.last_run_at ? esc(formatTime(job.last_run_at)) + ' (' + renderStatusBadge(job) + ')' : 'Never'}
         </span>
       </div>
     </div>
@@ -519,16 +535,16 @@ async function showJobDetail(jobId) {
       <div class="run-history">
         ${runs.length === 0 ? '<div class="text-dim">No execution history</div>' : runs.map(run => `
           <div class="run-entry">
-            <span class="run-time">${new Date(run.started_at).toLocaleString('en-US', { 
+            <span class="run-time">${esc(new Date(run.started_at).toLocaleString('en-US', { 
               month: 'short', 
               day: 'numeric', 
               hour: 'numeric', 
               minute: '2-digit' 
-            })}</span>
+            }))}</span>
             <span class="run-status ${run.status === 'ok' ? 'text-ok' : 'text-error'}">
-              ${run.status === 'ok' ? '✓' : '✗'} ${run.status}
+              ${run.status === 'ok' ? '✓' : '✗'} ${esc(run.status)}
             </span>
-            <span class="run-duration">${formatDuration(run.duration_ms)}</span>
+            <span class="run-duration">${esc(formatDuration(run.duration_ms))}</span>
           </div>
         `).join('')}
       </div>
