@@ -42,6 +42,16 @@ npm link
 
 ## Quick Start
 
+### New user? Start here
+
+```bash
+cardioclaw init
+```
+
+Detects your timezone, creates a starter `~/.cardioclaw/cardioclaw.yaml`, and tells you what to do next.
+
+---
+
 ### Already have OpenClaw cron jobs?
 
 Import them into your YAML with one command:
