@@ -1,5 +1,8 @@
 // CardioClaw Dashboard v2 - Terminal Aesthetic
 
+// Token from URL (for --remote mode authentication)
+const TOKEN = new URLSearchParams(window.location.search).get('token');
+
 /**
  * HTML-escape a value before inserting into innerHTML.
  * Always call this on any untrusted/database-sourced string.
@@ -27,8 +30,23 @@ const state = {
 };
 
 // API Helpers
+
+/** Append the token to a URL's query string if TOKEN is set. */
+function withToken(url) {
+  if (!TOKEN) return url;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}token=${encodeURIComponent(TOKEN)}`;
+}
+
 async function fetchJSON(url) {
-  const response = await fetch(url);
+  const response = await fetch(withToken(url));
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+}
+
+async function postRefresh() {
+  const url = withToken('/api/refresh');
+  const response = await fetch(url, { method: 'POST' });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
 }
@@ -59,6 +77,8 @@ async function loadOccurrences(startDate, endDate) {
 
 async function refreshAll() {
   try {
+    // Trigger server-side refresh first (fire-and-forget, ignore errors)
+    postRefresh().catch(() => {});
     await Promise.all([loadHeartbeats(), loadStatus()]);
     state.lastSync = new Date();
     renderCurrentView();
