@@ -54,6 +54,7 @@ program
   .description('Start web dashboard at localhost:3333')
   .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
   .option('-p, --port <port>', 'Port number', '3333')
+  .option('--host <host>', 'Host/IP to bind (default: 127.0.0.1; use 0.0.0.0 for network access)')
   .action((options) => {
     startDashboard(options);
   });
