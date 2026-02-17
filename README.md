@@ -423,6 +423,16 @@ cardioclaw dashboard -p 8080 # Custom port
 
 ---
 
+## Updating
+
+```bash
+npm update -g cardioclaw
+```
+
+Or re-run the install script to get the latest version.
+
+---
+
 ## Uninstall
 
 ```bash
