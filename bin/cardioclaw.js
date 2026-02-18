@@ -73,6 +73,7 @@ program
   .description('Take a screenshot of the dashboard (starts, captures, shuts down)')
   .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
   .option('-o, --output <path>', 'Output PNG path (default: temp file)')
+  .option('-v, --view <view>', 'View to capture: hourly, calendar, or list', 'list')
   .option('--width <px>', 'Viewport width', '1400')
   .option('--height <px>', 'Viewport height', '900')
   .option('--wait <ms>', 'Extra ms to wait after page load', '1200')
@@ -81,6 +82,7 @@ program
       const outputPath = await snapshot({
         config: options.config,
         output: options.output,
+        view: options.view,
         width: parseInt(options.width, 10),
         height: parseInt(options.height, 10),
         wait: parseInt(options.wait, 10),
