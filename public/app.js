@@ -26,7 +26,9 @@ const state = {
   status: {},
   runs: {},
   lastSync: null,
-  selectedJob: null
+  selectedJob: null,
+  listFilter: 'all',
+  listSort: 'name'
 };
 
 // API Helpers
@@ -438,22 +440,47 @@ function renderCalendarDay(date) {
   `;
 }
 
+function getFilteredSortedJobs() {
+  let jobs = [...state.heartbeats];
+
+  // Apply filter
+  if (state.listFilter === 'active') {
+    jobs = jobs.filter(j => j.status !== 'disabled' && !j.last_error && j.last_status !== 'error');
+  } else if (state.listFilter === 'failing') {
+    jobs = jobs.filter(j => j.last_error || j.last_status === 'error');
+  }
+
+  // Apply sort
+  if (state.listSort === 'name') {
+    jobs.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  } else if (state.listSort === 'next_run') {
+    jobs.sort((a, b) => (a.next_run_at || Infinity) - (b.next_run_at || Infinity));
+  } else if (state.listSort === 'status') {
+    const rank = j => (j.last_error || j.last_status === 'error') ? 0 : j.last_run_at ? 1 : 2;
+    jobs.sort((a, b) => rank(a) - rank(b));
+  }
+
+  return jobs;
+}
+
 function renderListView() {
+  const jobs = getFilteredSortedJobs();
+
   const html = `
     <div class="ascii-box">
       <div class="ascii-box-header">─ LIST VIEW ──────────────────────────────────────────────</div>
       <div class="list-controls">
         <div class="list-filters">
-          <button class="filter-btn active" data-filter="all">All</button>
-          <button class="filter-btn" data-filter="active">Active</button>
-          <button class="filter-btn" data-filter="failing">Failing</button>
+          <button class="filter-btn ${state.listFilter === 'all' ? 'active' : ''}" data-filter="all">All</button>
+          <button class="filter-btn ${state.listFilter === 'active' ? 'active' : ''}" data-filter="active">Active</button>
+          <button class="filter-btn ${state.listFilter === 'failing' ? 'active' : ''}" data-filter="failing">Failing</button>
         </div>
         <div class="list-sort">
           Sort:
           <select id="sort-select">
-            <option value="name">Name</option>
-            <option value="next_run">Next Run</option>
-            <option value="status">Status</option>
+            <option value="name" ${state.listSort === 'name' ? 'selected' : ''}>Name</option>
+            <option value="next_run" ${state.listSort === 'next_run' ? 'selected' : ''}>Next Run</option>
+            <option value="status" ${state.listSort === 'status' ? 'selected' : ''}>Status</option>
           </select>
         </div>
       </div>
@@ -467,7 +494,9 @@ function renderListView() {
           </tr>
         </thead>
         <tbody>
-          ${state.heartbeats.map(job => `
+          ${jobs.length === 0
+            ? `<tr><td colspan="4" class="text-dim" style="text-align:center;padding:1rem;">(no jobs match filter)</td></tr>`
+            : jobs.map(job => `
             <tr data-job-id="${esc(job.id)}">
               <td><span class="bullet">▸</span> ${esc(job.name)}</td>
               <td>${esc(formatSchedule(job.schedule))}</td>
@@ -481,6 +510,21 @@ function renderListView() {
   `;
   
   document.getElementById('content').innerHTML = html;
+
+  // Filter buttons
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.listFilter = btn.dataset.filter;
+      renderListView();
+    });
+  });
+
+  // Sort dropdown
+  document.getElementById('sort-select')?.addEventListener('change', (e) => {
+    state.listSort = e.target.value;
+    renderListView();
+  });
+
   attachJobClickListeners();
 }
 

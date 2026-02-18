@@ -17,12 +17,19 @@ YAML-based heartbeat orchestration for OpenClaw.
 ## Quick Reference
 
 ```bash
+cardioclaw init                # Create starter config with timezone detection
 cardioclaw status              # List all heartbeats + health
 cardioclaw sync                # Push YAML changes to OpenClaw
 cardioclaw sync --force        # Replace existing jobs
+cardioclaw discover            # Refresh job state from OpenClaw cron list
+cardioclaw import              # Pull existing cron jobs into YAML
+cardioclaw snapshot            # Save current state to snapshot file
+cardioclaw runs "Name"         # Show execution history for a heartbeat
+cardioclaw runs --all          # Show runs for all jobs
+cardioclaw prune               # Remove old completed one-shots from YAML
+cardioclaw prune --days 30     # Prune completed jobs older than 30 days
 cardioclaw remove "Name"       # Delete heartbeat from OpenClaw + YAML
 cardioclaw dedupe              # Remove duplicate jobs
-cardioclaw import              # Pull existing cron jobs into YAML
 cardioclaw dashboard           # Web UI at localhost:3333
 ```
 
