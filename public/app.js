@@ -571,7 +571,7 @@ async function showJobDetail(jobId) {
     </div>
   `;
   
-  document.getElementById('modal-title').textContent = `🦞 ${job.name}`;
+  document.getElementById('modal-title').textContent = `🫀 ${job.name}`;
   document.getElementById('modal-body').innerHTML = html;
   document.getElementById('detail-modal').classList.remove('hidden');
 }
@@ -618,8 +618,8 @@ function updateHealthPanel() {
   }
   
   // Update health panel
-  document.getElementById('health-active').textContent = `❤️ ${active} active`;
-  document.getElementById('health-failing').textContent = `💔 ${failing} failing`;
+  document.getElementById('health-active').textContent = `🦞 ${active} active`;
+  document.getElementById('health-failing').textContent = `⚠️ ${failing} failing`;
   document.getElementById('health-next').textContent = nextJob 
     ? `⏱ Next: ${nextJob.name} ${formatRelativeTime(nextJob.next_run_at)}`
     : '⏱ Next: --';
