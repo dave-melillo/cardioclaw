@@ -40,6 +40,7 @@ program
   .description('Show all heartbeats and system health')
   .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
   .option('--no-refresh', 'Skip discovery refresh')
+  .option('--full', 'Show all jobs without truncating')
   .action((options) => {
     status(options);
   });
