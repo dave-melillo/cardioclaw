@@ -20,11 +20,11 @@ Inspired by [Antfarm](https://antfarm.cool) — simple, self-contained, shippabl
 curl -fsSL https://raw.githubusercontent.com/dave-melillo/cardioclaw/main/scripts/install.sh | bash
 ```
 
-v0.2.0
+v0.2.1
 
 Paste in your terminal, or ask your OpenClaw to run it.
 
-**Requirements:** Node.js 16+ and OpenClaw CLI installed.
+**Requirements:** Node.js 18+ and OpenClaw CLI installed.
 
 <details>
 <summary>Manual install</summary>
@@ -429,7 +429,7 @@ cardioclaw dashboard -p 8080 # Custom port
 
 **Discovery:** Query `openclaw cron list` → update SQLite → mark managed vs unmanaged
 
-**Tech Stack:** Node.js, Commander, SQLite (better-sqlite3), Express, Tailwind
+**Tech Stack:** Node.js, Commander, SQLite (better-sqlite3), Express, custom CSS
 
 ---
 
