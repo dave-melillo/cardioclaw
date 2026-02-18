@@ -302,7 +302,7 @@ function renderHourJobs(hour, jobs) {
     const status = getJobStatus(job);
     return `
       <div class="job-entry" data-job-id="${esc(job.id)}">
-        <span>🦞</span>
+        <span class="bullet">▸</span>
         <span class="job-name">${esc(job.name)}</span>
         <span class="job-status ${esc(status.class)}">${esc(status.text)}</span>
       </div>
@@ -427,7 +427,7 @@ function renderCalendarDay(date) {
           return `
             <div class="calendar-job" data-job-id="${esc(job.id)}">
               ${displayTime !== null ? `<span class="time">${esc(String(displayTime).padStart(2, '0'))}:00</span>` : ''}
-              <span class="${esc(status.class)}">🦞</span>
+              <span class="${esc(status.class)} bullet">▸</span>
               <span class="text-dim" style="font-size: 0.7rem; margin-left: 0.2rem;">${esc(job.name.substring(0, 12))}</span>
             </div>
           `;
@@ -469,7 +469,7 @@ function renderListView() {
         <tbody>
           ${state.heartbeats.map(job => `
             <tr data-job-id="${esc(job.id)}">
-              <td>🦞 ${esc(job.name)}</td>
+              <td><span class="bullet">▸</span> ${esc(job.name)}</td>
               <td>${esc(formatSchedule(job.schedule))}</td>
               <td>${esc(formatRelativeTime(job.next_run_at))}</td>
               <td>${renderStatusBadge(job)}</td>
@@ -582,17 +582,19 @@ function closeModal() {
 
 // Health Panel
 function updateHealthPanel() {
-  const active = state.heartbeats.filter(j => j.status === 'active').length;
-  const failing = state.heartbeats.filter(j => j.status === 'failing').length;
+  const now = Date.now();
+
+  // Use live status from /api/status for accurate failing count
+  const active = state.status.active ?? state.heartbeats.filter(j => j.status === 'active').length;
+  const failing = state.status.failing ?? state.heartbeats.filter(j => j.status === 'failing').length;
   
   const nextJob = state.heartbeats
-    .filter(j => j.next_run_at && j.next_run_at > Date.now())
+    .filter(j => j.next_run_at && j.next_run_at > now)
     .sort((a, b) => a.next_run_at - b.next_run_at)[0];
   
-  // Calculate "BPM" (jobs per minute) from recent activity
-  const now = Date.now();
-  const recentRuns = state.heartbeats.filter(j => 
-    j.last_run_at && (now - j.last_run_at < 60000) // Last minute
+  // BPH: beats per hour — jobs scheduled to fire in the next 60 minutes
+  const bph = state.heartbeats.filter(j =>
+    j.next_run_at && j.next_run_at > now && j.next_run_at <= now + 3600000
   ).length;
   
   // Calculate success rate from all runs
@@ -601,13 +603,13 @@ function updateHealthPanel() {
   const successfulRuns = allRuns.filter(r => r.status === 'ok').length;
   const successRate = totalRuns > 0 ? Math.round((successfulRuns / totalRuns) * 100) : 0;
   
-  // Update header BPM
-  document.getElementById('live-bpm').textContent = recentRuns || '--';
+  // Update header BPH (always show a number; 0 when nothing upcoming)
+  document.getElementById('live-bpm').textContent = bph;
   
-  // Update header status
+  // Update header status — wired to actual failing count
   const statusEl = document.getElementById('header-status');
   if (failing > 0) {
-    statusEl.textContent = '[ALERT]';
+    statusEl.textContent = '[DEGRADED]';
     statusEl.style.color = 'var(--status-error)';
   } else if (active > 0) {
     statusEl.textContent = '[HEALTHY]';
@@ -617,13 +619,13 @@ function updateHealthPanel() {
     statusEl.style.color = 'var(--text-dim)';
   }
   
-  // Update health panel
-  document.getElementById('health-active').textContent = `🦞 ${active} active`;
+  // Update health panel (◉ replaces 🦞 in stat rows; lobster lives in branding only)
+  document.getElementById('health-active').textContent = `◉ ${active} active`;
   document.getElementById('health-failing').textContent = `⚠️ ${failing} failing`;
   document.getElementById('health-next').textContent = nextJob 
     ? `⏱ Next: ${nextJob.name} ${formatRelativeTime(nextJob.next_run_at)}`
     : '⏱ Next: --';
-  document.getElementById('health-success').textContent = `🦞 ${successRate}% uptime`;
+  document.getElementById('health-success').textContent = `◉ ${successRate}% uptime`;
   
   if (state.lastSync) {
     const ago = Math.floor((Date.now() - state.lastSync) / 1000);
