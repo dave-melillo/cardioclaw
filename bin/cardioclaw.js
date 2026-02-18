@@ -11,6 +11,7 @@ const { remove } = require('../lib/remove');
 const { prune } = require('../lib/prune');
 const { showRuns } = require('../lib/runs');
 const { init } = require('../lib/init');
+const { takeSnapshot: snapshot } = require('../lib/snapshot');
 const packageJson = require('../package.json');
 
 const program = new Command();
@@ -65,6 +66,31 @@ program
   .option('--remote', 'Enable network access (binds 0.0.0.0, generates auth token, prints access URLs)')
   .action((options) => {
     startDashboard(options);
+  });
+
+program
+  .command('snapshot')
+  .description('Take a screenshot of the dashboard (starts, captures, shuts down)')
+  .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
+  .option('-o, --output <path>', 'Output PNG path (default: temp file)')
+  .option('--width <px>', 'Viewport width', '1400')
+  .option('--height <px>', 'Viewport height', '900')
+  .option('--wait <ms>', 'Extra ms to wait after page load', '1200')
+  .action(async (options) => {
+    try {
+      const outputPath = await snapshot({
+        config: options.config,
+        output: options.output,
+        width: parseInt(options.width, 10),
+        height: parseInt(options.height, 10),
+        wait: parseInt(options.wait, 10),
+      });
+      // Print just the path so agents/scripts can capture it cleanly
+      console.log(outputPath);
+    } catch (err) {
+      console.error('snapshot error:', err.message);
+      process.exit(1);
+    }
   });
 
 program
