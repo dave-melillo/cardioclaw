@@ -2,100 +2,10 @@
 
 const { test, describe } = require('node:test');
 const assert = require('node:assert/strict');
-const { buildCronCommand, buildCronArgs, DEFAULT_TIMEZONE } = require('../lib/parser');
+const { buildCronArgs, DEFAULT_TIMEZONE } = require('../lib/parser');
 
-// ─── buildCronCommand ───────────────────────────────────────────────────────
-
-describe('buildCronCommand', () => {
-  test('generates cron command for recurring job with prompt', () => {
-    const hb = {
-      name: 'Morning Briefing',
-      schedule: '0 8 * * *',
-      prompt: 'Run morning briefing',
-      delivery: 'telegram',
-    };
-    const cmd = buildCronCommand(hb);
-    assert.ok(cmd.includes('--name "Morning Briefing"'), 'should include name');
-    assert.ok(cmd.includes('--cron "0 8 * * *"'), 'should include cron expr');
-    assert.ok(cmd.includes('--message "Run morning briefing"'), 'should include message');
-    assert.ok(cmd.includes('--announce --channel telegram'), 'should include delivery');
-    assert.ok(!cmd.includes('--delete-after-run'), 'should not include delete-after-run');
-  });
-
-  test('generates one-shot command and sets --delete-after-run', () => {
-    const hb = {
-      name: 'Gym Reminder',
-      schedule: 'at 2026-06-01 09:00',
-      message: 'Gym time!',
-      sessionTarget: 'main',
-    };
-    const cmd = buildCronCommand(hb);
-    assert.ok(cmd.includes('--at "'), 'should include --at');
-    assert.ok(cmd.includes('--delete-after-run'), 'should include delete-after-run for one-shot');
-    assert.ok(cmd.includes('--session main'), 'should target main session');
-  });
-
-  test('throws when neither prompt nor message provided', () => {
-    const hb = {
-      name: 'Bad Job',
-      schedule: '0 9 * * *',
-    };
-    assert.throws(() => buildCronCommand(hb), /Must provide either prompt or message/);
-  });
-
-  test('escapes double quotes in name and prompt', () => {
-    const hb = {
-      name: 'Say "hello"',
-      schedule: '0 9 * * *',
-      prompt: 'Ask "What\'s up?"',
-    };
-    const cmd = buildCronCommand(hb);
-    assert.ok(cmd.includes('\\"hello\\"'), 'should escape quotes in name');
-  });
-
-  test('adds --model flag when model is specified', () => {
-    const hb = {
-      name: 'Smart Job',
-      schedule: '0 9 * * *',
-      prompt: 'Do something smart',
-      model: 'claude-opus-4-5',
-    };
-    const cmd = buildCronCommand(hb);
-    assert.ok(cmd.includes('--model "claude-opus-4-5"'), 'should include model');
-  });
-
-  test('uses --no-deliver when delivery is none', () => {
-    const hb = {
-      name: 'Silent Job',
-      schedule: '0 9 * * *',
-      prompt: 'Do silently',
-      delivery: 'none',
-    };
-    const cmd = buildCronCommand(hb);
-    assert.ok(cmd.includes('--no-deliver'), 'should include --no-deliver');
-  });
-
-  test('uses timezone from hb.tz', () => {
-    const hb = {
-      name: 'TZ Job',
-      schedule: '0 9 * * *',
-      prompt: 'Check time',
-      tz: 'America/Chicago',
-    };
-    const cmd = buildCronCommand(hb);
-    assert.ok(cmd.includes('--tz "America/Chicago"'), 'should use hb.tz');
-  });
-
-  test('uses timezone from defaults when hb.tz not set', () => {
-    const hb = {
-      name: 'Default TZ Job',
-      schedule: '0 9 * * *',
-      prompt: 'Check time',
-    };
-    const cmd = buildCronCommand(hb, { timezone: 'Europe/London' });
-    assert.ok(cmd.includes('--tz "Europe/London"'), 'should use defaults.timezone');
-  });
-});
+// buildCronCommand was a shell-string builder (deprecated / removed from exports).
+// Its behaviour is superseded by the injection-safe buildCronArgs tested below.
 
 // ─── buildCronArgs ──────────────────────────────────────────────────────────
 
