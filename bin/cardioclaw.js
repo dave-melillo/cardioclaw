@@ -10,6 +10,7 @@ const { dedupe } = require('../lib/dedupe');
 const { remove } = require('../lib/remove');
 const { prune } = require('../lib/prune');
 const { showRuns } = require('../lib/runs');
+const { validate } = require('../lib/validate');
 const { init } = require('../lib/init');
 const { takeSnapshot: snapshot } = require('../lib/snapshot');
 const packageJson = require('../package.json');
@@ -28,10 +29,13 @@ program
 
 program
   .command('sync')
-  .description('Read cardioclaw.yaml and create OpenClaw cron jobs')
+  .description('Sync heartbeats and/or cron jobs from YAML to OpenClaw')
   .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
   .option('--dry-run', 'Show what would be created without executing')
-  .option('-f, --force', 'Replace existing jobs instead of skipping')
+  .option('-f, --force', 'Replace/overwrite existing configs and files')
+  .option('--heartbeat', 'Sync both heartbeats and cron jobs (unified mode)')
+  .option('--heartbeat-only', 'Sync only heartbeat configs (skip cron jobs)')
+  .option('--restart', 'Restart gateway after applying heartbeat config (requires --heartbeat or --heartbeat-only)')
   .action((options) => {
     sync(options);
   });
@@ -97,10 +101,17 @@ program
 
 program
   .command('import')
-  .description('Import existing OpenClaw cron jobs into cardioclaw.yaml')
+  .description('Import existing OpenClaw cron jobs and/or heartbeat configs into YAML')
   .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
   .option('--dry-run', 'Preview without writing changes')
+  .option('--heartbeat', 'Import heartbeat configs (and cron jobs)')
+  .option('--heartbeat-only', 'Import only heartbeat configs (skip cron jobs)')
+  .option('--all', 'Alias for --heartbeat (import both)')
   .action((options) => {
+    // Handle --all alias
+    if (options.all) {
+      options.heartbeat = true;
+    }
     importJobs(options);
   });
 
@@ -142,6 +153,14 @@ program
   .option('-v, --verbose', 'Show error messages')
   .action((jobName, options) => {
     showRuns(jobName, options);
+  });
+
+program
+  .command('validate')
+  .description('Validate cardioclaw.yaml schema and configuration')
+  .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
+  .action((options) => {
+    validate(options);
   });
 
 program.parse(process.argv);
