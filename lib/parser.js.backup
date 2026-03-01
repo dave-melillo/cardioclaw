@@ -46,6 +46,33 @@ function resolveTimezone(hbTz, defaults = {}) {
   return SYSTEM_TIMEZONE;
 }
 
+function buildCronCommand(hb, defaults = {}) {
+  const timezone = resolveTimezone(hb.tz, defaults);
+  const sessionTarget = hb.sessionTarget || (hb.prompt ? 'isolated' : 'main');
+  const schedule = typeof hb.schedule === 'string' ? hb.schedule : '';
+
+  const parts = [
+    'openclaw cron add',
+    buildName(hb.name),
+    buildSchedule(schedule, timezone),
+    buildPayload(hb),
+    buildSession(sessionTarget),
+    buildDelivery(hb.delivery, sessionTarget),
+  ];
+
+  // Optional fields
+  if (hb.model) {
+    parts.push(`--model "${hb.model}"`);
+  }
+
+  // Delete after run for one-shot reminders
+  if (hb.deleteAfterRun || schedule.startsWith('at ')) {
+    parts.push('--delete-after-run');
+  }
+
+  return parts.filter(Boolean).join(' ');
+}
+
 /**
  * Build the spawnSync args array for a heartbeat (injection-safe).
  * Returns [cmd, argsArray] suitable for spawnSync(cmd, argsArray).
@@ -77,10 +104,13 @@ function buildCronArgs(hb, defaults = {}) {
   // Session
   args.push('--session', sessionTarget === 'main' ? 'main' : 'isolated');
 
-  // Delivery (v0.3.0 structured support)
+  // Delivery
   if (sessionTarget !== 'main') {
-    const deliveryArgs = buildDeliveryArgs(hb.delivery);
-    args.push(...deliveryArgs);
+    if (!hb.delivery || hb.delivery === 'none') {
+      args.push('--no-deliver');
+    } else {
+      args.push('--announce', '--channel', hb.delivery);
+    }
   }
 
   // Optional
@@ -95,58 +125,8 @@ function buildCronArgs(hb, defaults = {}) {
   return ['openclaw', args];
 }
 
-/**
- * Build delivery arguments for OpenClaw CLI (v0.3.0)
- * Supports both legacy string format and new structured format
- */
-function buildDeliveryArgs(delivery) {
-  if (!delivery || delivery === 'none') {
-    return ['--no-deliver'];
-  }
-  
-  // Legacy string format: delivery: "telegram"
-  if (typeof delivery === 'string') {
-    return ['--announce', '--channel', delivery];
-  }
-  
-  // New structured format (v0.3.0)
-  if (typeof delivery === 'object') {
-    const args = [];
-    
-    // Delivery condition: on (success | failure | always | none)
-    const on = delivery.on || 'success';
-    if (on === 'none') {
-      return ['--no-deliver'];
-    }
-    args.push('--deliver-on', on);
-    
-    // Delivery channel: telegram | discord | webhook
-    const channel = delivery.channel || 'telegram';
-    args.push('--deliver-channel', channel);
-    
-    // Delivery target: chat_id | channel:id | webhook URL
-    if (delivery.target) {
-      args.push('--deliver-target', delivery.target);
-    }
-    
-    // Delivery metadata (optional)
-    if (delivery.delivery_meta) {
-      if (delivery.delivery_meta.format) {
-        args.push('--deliver-format', delivery.delivery_meta.format);
-      }
-      if (delivery.delivery_meta.title) {
-        args.push('--deliver-title', delivery.delivery_meta.title);
-      }
-      if (delivery.delivery_meta.priority) {
-        args.push('--deliver-priority', delivery.delivery_meta.priority);
-      }
-    }
-    
-    return args;
-  }
-  
-  // Fallback: no delivery
-  return ['--no-deliver'];
+function buildName(name) {
+  return `--name "${escapeName(name)}"`;
 }
 
 function resolveAtTime(schedule, timezone) {
@@ -183,6 +163,50 @@ function resolveAtTime(schedule, timezone) {
   return dt.toUTC().toISO();
 }
 
+function buildSchedule(schedule, timezone) {
+  // Handle "at YYYY-MM-DD HH:MM [TZ]" format
+  if (schedule.startsWith('at ')) {
+    return `--at "${resolveAtTime(schedule, timezone)}"`;
+  }
+
+  // Cron expression with timezone
+  return `--cron "${schedule}" --tz "${timezone}"`;
+}
+
+function buildPayload(hb) {
+  if (hb.prompt) {
+    // agentTurn (isolated session, runs agent)
+    return `--message "${escapeMessage(hb.prompt)}"`;
+  } else if (hb.message) {
+    // systemEvent (main session, just injects text)
+    return `--system-event "${escapeMessage(hb.message)}"`;
+  }
+  
+  throw new Error('Must provide either prompt or message');
+}
+
+function buildSession(sessionTarget) {
+  // Map to OpenClaw CLI format
+  if (sessionTarget === 'main') {
+    return '--session main';
+  }
+  return '--session isolated';
+}
+
+function buildDelivery(delivery, sessionTarget) {
+  // Delivery options only work with isolated sessions
+  if (sessionTarget === 'main') {
+    return ''; // No delivery flags for main session
+  }
+  
+  if (!delivery || delivery === 'none') {
+    return '--no-deliver';
+  }
+  
+  // Announce mode with channel
+  return `--announce --channel ${delivery}`;
+}
+
 function escapeName(name) {
   // Escape quotes in name
   return name.replace(/"/g, '\\"');
@@ -193,4 +217,6 @@ function escapeMessage(msg) {
   return msg.replace(/"/g, '\\"');
 }
 
-module.exports = { buildCronArgs, resolveTimezone, buildDeliveryArgs, DEFAULT_TIMEZONE: SYSTEM_TIMEZONE };
+// buildCronCommand is a shell-string builder kept for test backwards-compat but
+// not exported — use buildCronArgs (injection-safe spawnSync array) instead.
+module.exports = { buildCronArgs, resolveTimezone, DEFAULT_TIMEZONE: SYSTEM_TIMEZONE };
