@@ -1,0 +1,40 @@
+# CardioClaw Unified Config - Test
+# Tests both heartbeat and cron job sync
+
+defaults:
+  timezone: America/New_York
+
+# Heartbeat configurations (new)
+agents:
+  - id: wolverine
+    heartbeat:
+      enabled: true
+      interval: 30m
+      target: last
+    checklist: |
+      # Wolverine Heartbeat Checklist
+      - Check active coding tasks
+      - Monitor build status
+      - Review open PRs
+
+  - id: beast
+    heartbeat:
+      enabled: true
+      interval: 1h
+      target: discord
+      to: "channel:1477483068037009521"
+    checklist: |
+      # Beast Heartbeat Checklist
+      - Review documentation updates
+      - Check system health
+      - Monitor research tasks
+
+# Cron jobs (existing)
+cron_jobs:
+  - name: Test Reminder
+    schedule: at 2026-03-01 22:00
+    message: "Test reminder from unified config"
+    sessionTarget: main
+    delivery:
+      mode: announce
+      channel: telegram
