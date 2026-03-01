@@ -1,0 +1,61 @@
+# CardioClaw Unified Configuration Example
+# Manages both heartbeats and cron jobs
+
+defaults:
+  timezone: America/New_York
+
+# Heartbeat configurations (OpenClaw heartbeat primitive)
+agents:
+  - id: main
+    heartbeat:
+      enabled: true
+      interval: 30m
+      target: last
+      activeHours:
+        start: "08:00"
+        end: "22:00"
+    checklist: |
+      # Main Agent Heartbeat
+      - Quick scan: anything urgent?
+      - Calendar check for next 2h
+      - If idle 8+ hours, brief check-in
+
+  - id: ops
+    heartbeat:
+      enabled: true
+      interval: 1h
+      target: telegram
+      to: "+15551234567"
+    checklist: |
+      # Ops Heartbeat
+      - Check failed jobs
+      - Monitor disk space
+      - Security alerts
+
+# Cron jobs (scheduled tasks)
+cron_jobs:
+  - name: Morning Briefing
+    schedule: "0 8 * * *"
+    agent: main
+    prompt: "Run morning briefing: weather + calendar + inbox"
+    delivery:
+      mode: announce
+      channel: telegram
+      to: "+15551234567"
+
+  - name: Weekly Review
+    schedule: "0 17 * * 5"
+    agent: main
+    prompt: "Weekly review of all active projects"
+    delivery:
+      mode: announce
+      channel: discord
+      target: "channel:123456789"
+
+  - name: One-Shot Reminder
+    schedule: at 2026-12-25 09:00
+    message: "Merry Christmas! 🎄"
+    sessionTarget: main
+    delivery:
+      mode: announce
+      channel: telegram
