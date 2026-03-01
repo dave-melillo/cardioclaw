@@ -5,10 +5,12 @@
 <h1 align="center">🫀 CardioClaw</h1>
 
 <p align="center">
-  <strong>YAML-based heartbeat orchestration for OpenClaw.</strong>
+  <strong>Unified heartbeat + cron orchestration for OpenClaw.</strong>
 </p>
 
-Define recurring tasks in clean YAML, sync to OpenClaw cron jobs with one command, and visualize everything on a timeline dashboard.
+Manage both OpenClaw heartbeats AND cron jobs from a single YAML file. Generate HEARTBEAT.md checklists, patch gateway config, and sync everything with one command.
+
+**v0.4.0:** Now with full heartbeat management support.
 
 Inspired by [Antfarm](https://antfarm.cool) — simple, self-contained, shippable.
 
@@ -65,23 +67,40 @@ Now all your existing heartbeats are in one YAML file. Edit, review, and manage 
 
 ---
 
-### Starting fresh? Create your heartbeats
+### Starting fresh? Create your config
 
 ```bash
 nano ~/.cardioclaw/cardioclaw.yaml
 ```
 
+**New unified schema (v0.4.0):**
 ```yaml
-heartbeats:
+# Heartbeat management
+agents:
+  - id: main
+    heartbeat:
+      interval: 30m
+      target: last
+    checklist: |
+      # Heartbeat checklist
+      - Quick scan: anything urgent?
+
+# Cron jobs
+cron_jobs:
   - name: Morning Briefing
     schedule: "0 8 * * *"
     prompt: "Run morning briefing: weather, calendar, inbox"
-    delivery: telegram
+    delivery:
+      mode: announce
+      channel: telegram
+```
 
-  - name: Gym Reminder
-    schedule: at 2026-02-15 18:00
-    message: "Reminder: Gym at 6 PM! 🏋️"
-    sessionTarget: main
+**Legacy schema (still supported):**
+```yaml
+heartbeats:  # Old name for cron jobs
+  - name: Morning Briefing
+    schedule: "0 8 * * *"
+    prompt: "Run briefing"
     delivery: telegram
 ```
 
