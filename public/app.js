@@ -1,5 +1,8 @@
 // CardioClaw Dashboard v2 - Terminal Aesthetic
 
+// Token from URL (for --remote mode authentication)
+const TOKEN = new URLSearchParams(window.location.search).get('token');
+
 /**
  * HTML-escape a value before inserting into innerHTML.
  * Always call this on any untrusted/database-sourced string.
@@ -23,12 +26,29 @@ const state = {
   status: {},
   runs: {},
   lastSync: null,
-  selectedJob: null
+  selectedJob: null,
+  listFilter: 'all',
+  listSort: 'name'
 };
 
 // API Helpers
+
+/** Append the token to a URL's query string if TOKEN is set. */
+function withToken(url) {
+  if (!TOKEN) return url;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}token=${encodeURIComponent(TOKEN)}`;
+}
+
 async function fetchJSON(url) {
-  const response = await fetch(url);
+  const response = await fetch(withToken(url));
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+}
+
+async function postRefresh() {
+  const url = withToken('/api/refresh');
+  const response = await fetch(url, { method: 'POST' });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
 }
@@ -59,6 +79,8 @@ async function loadOccurrences(startDate, endDate) {
 
 async function refreshAll() {
   try {
+    // Trigger server-side refresh first (fire-and-forget, ignore errors)
+    postRefresh().catch(() => {});
     await Promise.all([loadHeartbeats(), loadStatus()]);
     state.lastSync = new Date();
     renderCurrentView();
@@ -282,7 +304,7 @@ function renderHourJobs(hour, jobs) {
     const status = getJobStatus(job);
     return `
       <div class="job-entry" data-job-id="${esc(job.id)}">
-        <span>🦞</span>
+        <span class="bullet">▸</span>
         <span class="job-name">${esc(job.name)}</span>
         <span class="job-status ${esc(status.class)}">${esc(status.text)}</span>
       </div>
@@ -407,7 +429,7 @@ function renderCalendarDay(date) {
           return `
             <div class="calendar-job" data-job-id="${esc(job.id)}">
               ${displayTime !== null ? `<span class="time">${esc(String(displayTime).padStart(2, '0'))}:00</span>` : ''}
-              <span class="${esc(status.class)}">🦞</span>
+              <span class="${esc(status.class)} bullet">▸</span>
               <span class="text-dim" style="font-size: 0.7rem; margin-left: 0.2rem;">${esc(job.name.substring(0, 12))}</span>
             </div>
           `;
@@ -418,22 +440,47 @@ function renderCalendarDay(date) {
   `;
 }
 
+function getFilteredSortedJobs() {
+  let jobs = [...state.heartbeats];
+
+  // Apply filter
+  if (state.listFilter === 'active') {
+    jobs = jobs.filter(j => j.status !== 'disabled' && !j.last_error && j.last_status !== 'error');
+  } else if (state.listFilter === 'failing') {
+    jobs = jobs.filter(j => j.last_error || j.last_status === 'error');
+  }
+
+  // Apply sort
+  if (state.listSort === 'name') {
+    jobs.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  } else if (state.listSort === 'next_run') {
+    jobs.sort((a, b) => (a.next_run_at || Infinity) - (b.next_run_at || Infinity));
+  } else if (state.listSort === 'status') {
+    const rank = j => (j.last_error || j.last_status === 'error') ? 0 : j.last_run_at ? 1 : 2;
+    jobs.sort((a, b) => rank(a) - rank(b));
+  }
+
+  return jobs;
+}
+
 function renderListView() {
+  const jobs = getFilteredSortedJobs();
+
   const html = `
     <div class="ascii-box">
       <div class="ascii-box-header">─ LIST VIEW ──────────────────────────────────────────────</div>
       <div class="list-controls">
         <div class="list-filters">
-          <button class="filter-btn active" data-filter="all">All</button>
-          <button class="filter-btn" data-filter="active">Active</button>
-          <button class="filter-btn" data-filter="failing">Failing</button>
+          <button class="filter-btn ${state.listFilter === 'all' ? 'active' : ''}" data-filter="all">All</button>
+          <button class="filter-btn ${state.listFilter === 'active' ? 'active' : ''}" data-filter="active">Active</button>
+          <button class="filter-btn ${state.listFilter === 'failing' ? 'active' : ''}" data-filter="failing">Failing</button>
         </div>
         <div class="list-sort">
           Sort:
           <select id="sort-select">
-            <option value="name">Name</option>
-            <option value="next_run">Next Run</option>
-            <option value="status">Status</option>
+            <option value="name" ${state.listSort === 'name' ? 'selected' : ''}>Name</option>
+            <option value="next_run" ${state.listSort === 'next_run' ? 'selected' : ''}>Next Run</option>
+            <option value="status" ${state.listSort === 'status' ? 'selected' : ''}>Status</option>
           </select>
         </div>
       </div>
@@ -447,9 +494,11 @@ function renderListView() {
           </tr>
         </thead>
         <tbody>
-          ${state.heartbeats.map(job => `
+          ${jobs.length === 0
+            ? `<tr><td colspan="4" class="text-dim" style="text-align:center;padding:1rem;">(no jobs match filter)</td></tr>`
+            : jobs.map(job => `
             <tr data-job-id="${esc(job.id)}">
-              <td>🦞 ${esc(job.name)}</td>
+              <td><span class="bullet">▸</span> ${esc(job.name)}</td>
               <td>${esc(formatSchedule(job.schedule))}</td>
               <td>${esc(formatRelativeTime(job.next_run_at))}</td>
               <td>${renderStatusBadge(job)}</td>
@@ -461,6 +510,21 @@ function renderListView() {
   `;
   
   document.getElementById('content').innerHTML = html;
+
+  // Filter buttons
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.listFilter = btn.dataset.filter;
+      renderListView();
+    });
+  });
+
+  // Sort dropdown
+  document.getElementById('sort-select')?.addEventListener('change', (e) => {
+    state.listSort = e.target.value;
+    renderListView();
+  });
+
   attachJobClickListeners();
 }
 
@@ -551,7 +615,7 @@ async function showJobDetail(jobId) {
     </div>
   `;
   
-  document.getElementById('modal-title').textContent = `🦞 ${job.name}`;
+  document.getElementById('modal-title').textContent = `🫀 ${job.name}`;
   document.getElementById('modal-body').innerHTML = html;
   document.getElementById('detail-modal').classList.remove('hidden');
 }
@@ -562,17 +626,19 @@ function closeModal() {
 
 // Health Panel
 function updateHealthPanel() {
-  const active = state.heartbeats.filter(j => j.status === 'active').length;
-  const failing = state.heartbeats.filter(j => j.status === 'failing').length;
+  const now = Date.now();
+
+  // Use live status from /api/status for accurate failing count
+  const active = state.status.active ?? state.heartbeats.filter(j => j.status === 'active').length;
+  const failing = state.status.failing ?? state.heartbeats.filter(j => j.status === 'failing').length;
   
   const nextJob = state.heartbeats
-    .filter(j => j.next_run_at && j.next_run_at > Date.now())
+    .filter(j => j.next_run_at && j.next_run_at > now)
     .sort((a, b) => a.next_run_at - b.next_run_at)[0];
   
-  // Calculate "BPM" (jobs per minute) from recent activity
-  const now = Date.now();
-  const recentRuns = state.heartbeats.filter(j => 
-    j.last_run_at && (now - j.last_run_at < 60000) // Last minute
+  // BPH: beats per hour — jobs scheduled to fire in the next 60 minutes
+  const bph = state.heartbeats.filter(j =>
+    j.next_run_at && j.next_run_at > now && j.next_run_at <= now + 3600000
   ).length;
   
   // Calculate success rate from all runs
@@ -581,13 +647,13 @@ function updateHealthPanel() {
   const successfulRuns = allRuns.filter(r => r.status === 'ok').length;
   const successRate = totalRuns > 0 ? Math.round((successfulRuns / totalRuns) * 100) : 0;
   
-  // Update header BPM
-  document.getElementById('live-bpm').textContent = recentRuns || '--';
+  // Update header BPH (always show a number; 0 when nothing upcoming)
+  document.getElementById('live-bpm').textContent = bph;
   
-  // Update header status
+  // Update header status — wired to actual failing count
   const statusEl = document.getElementById('header-status');
   if (failing > 0) {
-    statusEl.textContent = '[ALERT]';
+    statusEl.textContent = '[DEGRADED]';
     statusEl.style.color = 'var(--status-error)';
   } else if (active > 0) {
     statusEl.textContent = '[HEALTHY]';
@@ -597,13 +663,13 @@ function updateHealthPanel() {
     statusEl.style.color = 'var(--text-dim)';
   }
   
-  // Update health panel
-  document.getElementById('health-active').textContent = `❤️ ${active} active`;
-  document.getElementById('health-failing').textContent = `💔 ${failing} failing`;
+  // Update health panel (◉ replaces 🦞 in stat rows; lobster lives in branding only)
+  document.getElementById('health-active').textContent = `◉ ${active} active`;
+  document.getElementById('health-failing').textContent = `⚠️ ${failing} failing`;
   document.getElementById('health-next').textContent = nextJob 
     ? `⏱ Next: ${nextJob.name} ${formatRelativeTime(nextJob.next_run_at)}`
     : '⏱ Next: --';
-  document.getElementById('health-success').textContent = `🦞 ${successRate}% uptime`;
+  document.getElementById('health-success').textContent = `◉ ${successRate}% uptime`;
   
   if (state.lastSync) {
     const ago = Math.floor((Date.now() - state.lastSync) / 1000);

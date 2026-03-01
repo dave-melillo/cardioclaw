@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🦞 CardioClaw Dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦞</text></svg>">
   <link rel="stylesheet" href="/terminal.css">
 </head>
 <body>
@@ -12,7 +13,7 @@
     <div class="header">
       <div class="logo">🦞 CARDIOCLAW</div>
       <div class="health-indicator">
-        <span id="header-bpm" class="bpm-display">❤️ <span id="live-bpm">--</span> BPM</span>
+        <span id="header-bpm" class="bpm-display">❤️ <span id="live-bpm">--</span> BPH</span>
         <span id="header-status" class="status-text">[MONITORING]</span>
       </div>
       <div class="view-switcher">
@@ -30,10 +31,10 @@
     <!-- Health Panel (Footer) -->
     <div class="health-panel">
       <div class="health-stats">
-        <span id="health-active">❤️ 0 active</span> •
-        <span id="health-failing">💔 0 failing</span> •
+        <span id="health-active">◉ 0 active</span> •
+        <span id="health-failing">⚠️ 0 failing</span> •
         <span id="health-next">⏱ Next: --</span> •
-        <span id="health-success" class="success-rate">🦞 --% uptime</span>
+        <span id="health-success" class="success-rate">◉ --% uptime</span>
       </div>
       <div class="health-actions">
         <span id="last-sync">Last sync: --</span>
@@ -45,7 +46,7 @@
     <div id="detail-modal" class="modal hidden">
       <div class="modal-content">
         <div class="modal-header">
-          <span id="modal-title">🦞 Heartbeat Details</span>
+          <span id="modal-title">🫀 Heartbeat Details</span>
           <button id="modal-close" class="btn-close">[ CLOSE ]</button>
         </div>
         <div id="modal-body" class="modal-body">

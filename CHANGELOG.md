@@ -3,6 +3,50 @@
 All notable changes to CardioClaw are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+## [0.3.0] — 2026-03-01 — Discovery & Delivery
+
+### Added
+- **Universal Discovery** — Bi-directional sync between YAML and OpenClaw cron jobs
+- **Gap Detection** — `cardioclaw status` shows managed (🟢) vs unmanaged (🟡) vs orphaned (🔴) jobs
+- **Auto-Import** — `cardioclaw import --all` brings unmanaged jobs into YAML ownership
+- **Granular Delivery Routing** — `delivery.on: success|failure|always|none` for conditional notifications
+- **Multi-Channel Routing** — `delivery.channel: telegram|discord|webhook` with `delivery.target`
+- **Ownership Metadata** — Track how jobs were created: `yaml`, `api`, `import`, `manual`
+- **Dashboard Indicators** — Visual markers for managed (🟢), unmanaged (🟡), orphaned (🔴) jobs
+- **Enhanced Status** — Gap metrics and ownership breakdown in `cardioclaw status`
+- **Created Via Tracking** — `created_via` column in jobs table tracks job origin
+- **Owner Agent Tracking** — `owner_agent` column tracks which agent created the job
+
+### Changed
+- `lib/parser.js` — New `buildDelivery()` supports structured YAML configuration
+- `lib/discovery.js` — Enhanced to track unmanaged jobs and compute gap metrics
+- `lib/db.js` — Added `created_via` and `owner_agent` columns to jobs table
+- `lib/status.js` — Shows gap metrics and ownership breakdown
+- Backward compatibility maintained: legacy `delivery: telegram` string syntax still works
+- README.md — Added Discovery & Reconciliation section with examples
+- README.md — Added Delivery Routing section with multi-channel examples
+
+### Fixed
+- Discovery gap: 27 vs 30 jobs → now shows exact breakdown with reconciliation tools
+- One-shot zombie entries now tracked as "orphaned" instead of disappearing silently
+- Manual jobs created outside CardioClaw now properly attributed in status reports
+
+### Breaking Changes
+- **None** — All changes are backward compatible
+- Legacy `delivery: "telegram"` string format still supported
+
+### Migration
+No action required. Existing configs continue to work. Optional enhancements:
+```bash
+# Close discovery gap (optional)
+cardioclaw import --all
+
+# Test new delivery routing (optional)
+# Edit cardioclaw.yaml with structured delivery config
+```
+
+---
+
 
 ---
 
