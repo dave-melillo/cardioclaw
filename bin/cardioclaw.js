@@ -10,6 +10,7 @@ const { dedupe } = require('../lib/dedupe');
 const { remove } = require('../lib/remove');
 const { prune } = require('../lib/prune');
 const { showRuns } = require('../lib/runs');
+const { validate } = require('../lib/validate');
 const packageJson = require('../package.json');
 
 const program = new Command();
@@ -117,6 +118,14 @@ program
   .option('-v, --verbose', 'Show error messages')
   .action((jobName, options) => {
     showRuns(jobName, options);
+  });
+
+program
+  .command('validate')
+  .description('Validate cardioclaw.yaml schema and configuration')
+  .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
+  .action((options) => {
+    validate(options);
   });
 
 program.parse(process.argv);
