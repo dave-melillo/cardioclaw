@@ -42,6 +42,55 @@ npm link
 
 ---
 
+## Updating
+
+**Already have CardioClaw installed? Update to the latest version:**
+
+```bash
+# Find where CardioClaw is installed
+which cardioclaw
+# Usually: ~/.cardioclaw/cardioclaw or ~/clawd/cardioclaw
+
+# Go to that directory and pull
+cd ~/.cardioclaw/cardioclaw  # or wherever yours is installed
+git pull origin main
+```
+
+**That's it.** No need to run `npm install` again unless the release notes mention new dependencies.
+
+**Verify the update:**
+```bash
+cardioclaw --version
+cardioclaw dashboard --help  # Should show --remote flag
+```
+
+<details>
+<summary>If you installed via install.sh</summary>
+
+Re-run the install script:
+```bash
+curl -fsSL https://raw.githubusercontent.com/dave-melillo/cardioclaw/main/scripts/install.sh | bash
+```
+
+</details>
+
+<details>
+<summary>If you're not sure where it's installed</summary>
+
+```bash
+# Find the install location
+which cardioclaw
+# Example output: /Users/dave/.cardioclaw/cardioclaw/bin/cardioclaw.js
+
+# The repo is the parent of bin/
+cd /Users/dave/.cardioclaw/cardioclaw
+git pull origin main
+```
+
+</details>
+
+---
+
 ## Quick Start
 
 ### New user? Start here
