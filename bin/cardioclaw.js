@@ -63,11 +63,10 @@ program
 
 program
   .command('dashboard')
-  .description('Start web dashboard at localhost:3333')
+  .description('Start web dashboard (auto-detects Tailscale/LAN)')
   .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
   .option('-p, --port <port>', 'Port number', '3333')
-  .option('--host <host>', 'Host/IP to bind (default: 127.0.0.1; use 0.0.0.0 for network access)')
-  .option('--remote', 'Enable network access (binds 0.0.0.0, generates auth token, prints access URLs)')
+  .option('--localhost', 'Force localhost-only binding (override auto-detection)')
   .action((options) => {
     startDashboard(options);
   });
