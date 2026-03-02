@@ -67,8 +67,74 @@ program
   .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
   .option('-p, --port <port>', 'Port number', '3333')
   .option('--remote', 'Enable network access (auto-detects Tailscale/LAN, requires token)')
+  .option('--daemon', 'Run in background (prints token and exits)')
   .action((options) => {
-    startDashboard(options);
+    if (options.daemon) {
+      // Daemon mode: spawn detached child and exit
+      const { spawn } = require('child_process');
+      const fs = require('fs');
+      const path = require('path');
+      const os = require('os');
+      
+      const logFile = path.join(os.tmpdir(), 'cardioclaw-dashboard.log');
+      const pidFile = path.join(os.tmpdir(), 'cardioclaw-dashboard.pid');
+      
+      // Build args without --daemon
+      const args = ['dashboard'];
+      if (options.config !== 'cardioclaw.yaml') args.push('-c', options.config);
+      if (options.port !== '3333') args.push('-p', options.port);
+      if (options.remote) args.push('--remote');
+      
+      const out = fs.openSync(logFile, 'w');
+      const child = spawn(process.execPath, [__filename, ...args], {
+        detached: true,
+        stdio: ['ignore', out, out],
+        cwd: process.cwd()
+      });
+      
+      fs.writeFileSync(pidFile, String(child.pid));
+      child.unref();
+      
+      console.log('');
+      console.log('🫀 CardioClaw Dashboard (daemon mode)');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('');
+      console.log(`  ✓ Started in background (PID: ${child.pid})`);
+      console.log(`  📄 Log: ${logFile}`);
+      console.log(`  🔑 PID: ${pidFile}`);
+      console.log('');
+      
+      // Wait a moment for server to start, then show URLs/token from log
+      setTimeout(() => {
+        try {
+          const log = fs.readFileSync(logFile, 'utf8');
+          const urlMatch = log.match(/→ (http:\/\/[^\s]+)/g);
+          const tokenMatch = log.match(/Auth Token: ([a-f0-9]+)/);
+          
+          if (urlMatch) {
+            console.log('  Access URLs:');
+            urlMatch.forEach(u => console.log(`  ${u}`));
+          }
+          if (tokenMatch) {
+            console.log('');
+            console.log(`  🔐 Token: ${tokenMatch[1]}`);
+            if (urlMatch && urlMatch[0]) {
+              const baseUrl = urlMatch[0].replace('→ ', '');
+              console.log(`  📋 Full URL: ${baseUrl}?token=${tokenMatch[1]}`);
+            }
+          }
+          console.log('');
+          console.log('  Stop: kill $(cat /tmp/cardioclaw-dashboard.pid)');
+          console.log('');
+        } catch (e) {
+          console.log('  Check log for URLs and token:', logFile);
+          console.log('');
+        }
+        process.exit(0);
+      }, 2000);
+    } else {
+      startDashboard(options);
+    }
   });
 
 program
