@@ -63,10 +63,10 @@ program
 
 program
   .command('dashboard')
-  .description('Start web dashboard (auto-detects Tailscale/LAN)')
+  .description('Start web dashboard (localhost-only by default)')
   .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
   .option('-p, --port <port>', 'Port number', '3333')
-  .option('--localhost', 'Force localhost-only binding (override auto-detection)')
+  .option('--remote', 'Enable network access (auto-detects Tailscale/LAN, requires token)')
   .action((options) => {
     startDashboard(options);
   });
