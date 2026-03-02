@@ -457,8 +457,51 @@ Last 20 runs:
 </p>
 
 ```bash
-cardioclaw dashboard         # Start at localhost:3333
+cardioclaw dashboard         # Localhost only (default, secure)
 cardioclaw dashboard -p 8080 # Custom port
+```
+
+### Remote Access (Headless/VPS)
+
+Running OpenClaw on a Mac Mini, Pi, or VPS? Access the dashboard from your workstation:
+
+```bash
+# SSH into your server and start dashboard in background
+ssh user@your-server "cd /path/to/cardioclaw && cardioclaw dashboard --remote --daemon"
+```
+
+Output:
+```
+🫀 CardioClaw Dashboard (daemon mode)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ✓ Started in background (PID: 12345)
+
+  Access URLs:
+  → http://192.168.1.100:3333
+  → http://localhost:3333
+
+  🔐 Token: abc123def456...
+  📋 Full URL: http://192.168.1.100:3333?token=abc123def456...
+
+  Stop: kill $(cat /tmp/cardioclaw-dashboard.pid)
+```
+
+**Copy the full URL with token** and open in your browser. That's it.
+
+**Flags:**
+- `--remote` — Enable network access (binds to all interfaces, requires token)
+- `--daemon` — Run in background (prints token and exits)
+
+**Security:**
+- Default (`cardioclaw dashboard`) is localhost-only — no network exposure
+- `--remote` requires a 32-character auth token in URL or header
+- Token is generated fresh each time you start the dashboard
+- HTTP only — for HTTPS, use [Tailscale Serve](https://tailscale.com/kb/1242/tailscale-serve) or a reverse proxy
+
+**Stop the daemon:**
+```bash
+ssh user@your-server "kill \$(cat /tmp/cardioclaw-dashboard.pid)"
 ```
 
 **Three Views:**
