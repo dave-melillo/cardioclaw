@@ -670,7 +670,11 @@ function updateHealthPanel() {
   }
   
   // Update health panel (◉ replaces 🦞 in stat rows; lobster lives in branding only)
-  document.getElementById('health-active').textContent = `◉ ${active} active`;
+  const total = state.status.total ?? state.heartbeats.length;
+  const heartbeatCount = state.status.heartbeats ?? state.heartbeats.filter(j => j.type === 'heartbeat').length;
+  const cronCount = state.status.cronJobs ?? state.heartbeats.filter(j => j.type === 'cron').length;
+  
+  document.getElementById('health-active').textContent = `◉ ${total} cardios (${heartbeatCount} heartbeats, ${cronCount} cron)`;
   document.getElementById('health-failing').textContent = `⚠️ ${failing} failing`;
   document.getElementById('health-next').textContent = nextJob 
     ? `⏱ Next: ${nextJob.name} ${formatRelativeTime(nextJob.next_run_at)}`
