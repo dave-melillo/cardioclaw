@@ -151,17 +151,19 @@ program
             const urlMatch = log.match(/→ (http:\/\/[^\s]+)/g);
             const tokenMatch = log.match(/Auth Token: ([a-f0-9]+)/);
             
-            if (urlMatch) {
+            if (urlMatch && tokenMatch) {
+              const token = tokenMatch[1];
+              console.log('  Access URLs (copy one that works from your machine):');
+              console.log('');
+              urlMatch.forEach(u => {
+                const baseUrl = u.replace('→ ', '');
+                console.log(`  ${baseUrl}?token=${token}`);
+              });
+              console.log('');
+              console.log(`  🔐 Token: ${token}`);
+            } else if (urlMatch) {
               console.log('  Access URLs:');
               urlMatch.forEach(u => console.log(`  ${u}`));
-            }
-            if (tokenMatch) {
-              console.log('');
-              console.log(`  🔐 Token: ${tokenMatch[1]}`);
-              if (urlMatch && urlMatch[0]) {
-                const baseUrl = urlMatch[0].replace('→ ', '');
-                console.log(`  📋 Full URL: ${baseUrl}?token=${tokenMatch[1]}`);
-              }
             }
             console.log('');
             console.log('  Stop: kill $(cat /tmp/cardioclaw-dashboard.pid)');
