@@ -46,8 +46,12 @@ cardioclaw discover
 # 2. Generate unified cardioclaw.yml
 cardioclaw sync
 
-# 3. Launch the dashboard
+# 3. Launch the dashboard (local access)
 cardioclaw dashboard
+
+# 3b. Or launch for remote access (LAN/SSH/Tailscale)
+cardioclaw dashboard --remote --daemon
+# Copy the token URL from output and open in your browser
 ```
 
 ---
@@ -106,15 +110,30 @@ Launch a web-based dashboard showing all scheduled assets.
 ```bash
 cardioclaw dashboard              # Local only (port 3333)
 cardioclaw dashboard --port 8080  # Custom port
-cardioclaw dashboard --remote     # Enable network access
+cardioclaw dashboard --remote     # Enable network access (LAN/Tailscale)
 cardioclaw dashboard --daemon     # Run in background
 ```
 
+**Access from another machine (SSH, LAN, Tailscale):**
+
+```bash
+# Run in background with network access
+cardioclaw dashboard --remote --daemon
+
+# Output includes the token URL:
+#   🔐 Token: abc123...
+#   📋 Full URL: http://192.168.1.100:3333?token=abc123...
+#
+# Open that URL from your other machine.
+# A new token is generated each time the dashboard starts.
+```
+
 **Features:**
-- List view of all heartbeats and cron jobs
+- Hourly, calendar, and list views
 - Filter by type (heartbeat/cron)
 - Sort by next run time
 - Visual indicators for enabled/disabled/failing
+- Auto-refresh every 30 seconds
 
 ### `cardioclaw validate`
 
