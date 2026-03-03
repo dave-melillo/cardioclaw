@@ -158,6 +158,9 @@ function parseSchedule(scheduleStr) {
     if (schedule.kind === 'cron') {
       return { type: 'recurring', expr: schedule.expr, tz: schedule.tz };
     }
+    if (schedule.kind === 'every') {
+      return { type: 'interval', everyMs: schedule.everyMs };
+    }
     return { type: 'unknown' };
   } catch {
     return { type: 'unknown' };
@@ -176,10 +179,13 @@ function getJobsForDate(date) {
       return isSameDay(schedule.time, date);
     }
     
-    // For recurring jobs, show all active ones
-    // (Without a full cron parser, we can't determine exact days)
-    // Show active recurring jobs on all dates being viewed
+    // For recurring jobs (cron), show all active ones
     if (schedule.type === 'recurring' && job.status === 'active') {
+      return true;
+    }
+    
+    // For interval jobs (heartbeats), show all active ones
+    if (schedule.type === 'interval' && job.status === 'active') {
       return true;
     }
     
