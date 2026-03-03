@@ -1,7 +1,7 @@
 {
   "name": "cardioclaw",
-  "version": "0.3.0",
-  "description": "YAML to OpenClaw cron sync tool",
+  "version": "1.0.0",
+  "description": "Sync and visualization tool for OpenClaw scheduled assets",
   "main": "bin/cardioclaw.js",
   "bin": {
     "cardioclaw": "./bin/cardioclaw.js"

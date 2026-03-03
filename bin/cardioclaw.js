@@ -1,70 +1,53 @@
 #!/usr/bin/env node
 
+/**
+ * CardioClaw 1.0 CLI
+ * 
+ * Sync and visualization tool for OpenClaw scheduled assets.
+ * READ-ONLY relative to OpenClaw configs - we only write to cardioclaw.yml
+ */
+
 const { Command } = require('commander');
 const { sync } = require('../lib/sync');
-const { status } = require('../lib/status');
 const { discover } = require('../lib/discovery');
-const { importJobs } = require('../lib/import');
-const { startDashboard } = require('../lib/server');
-const { dedupe } = require('../lib/dedupe');
-const { remove } = require('../lib/remove');
-const { prune } = require('../lib/prune');
-const { showRuns } = require('../lib/runs');
 const { validate } = require('../lib/validate');
-const { init } = require('../lib/init');
+const { status } = require('../lib/status');
+const { startDashboard } = require('../lib/server');
+const { showRuns } = require('../lib/runs');
 const { takeSnapshot: snapshot } = require('../lib/snapshot');
+const { init } = require('../lib/init');
 const packageJson = require('../package.json');
 
 const program = new Command();
 
 program
   .name('cardioclaw')
-  .description('YAML to OpenClaw cron sync tool')
+  .description('Sync and visualization tool for OpenClaw scheduled assets')
   .version(packageJson.version);
 
+// ============================================
+// Core Commands (1.0)
+// ============================================
+
 program
-  .command('init')
-  .description('Create a starter cardioclaw.yaml with detected timezone')
-  .action(() => init());
+  .command('discover')
+  .description('Scan OpenClaw configs and report counts (read-only)')
+  .action(() => {
+    discover();
+  });
 
 program
   .command('sync')
-  .description('Sync heartbeats and/or cron jobs from YAML to OpenClaw')
-  .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
-  .option('--dry-run', 'Show what would be created without executing')
-  .option('-f, --force', 'Replace/overwrite existing configs and files')
-  .option('--heartbeat', 'Sync both heartbeats and cron jobs (unified mode)')
-  .option('--heartbeat-only', 'Sync only heartbeat configs (skip cron jobs)')
-  .option('--restart', 'Restart gateway after applying heartbeat config (requires --heartbeat or --heartbeat-only)')
+  .description('Read OpenClaw configs and write unified cardioclaw.yml')
+  .option('-o, --output <path>', 'Output path for cardioclaw.yml', 'cardioclaw.yml')
   .action((options) => {
     sync(options);
   });
 
 program
-  .command('status')
-  .description('Show all heartbeats and system health')
-  .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
-  .option('--no-refresh', 'Skip discovery refresh')
-  .option('--full', 'Show all jobs without truncating')
-  .action((options) => {
-    status(options);
-  });
-
-program
-  .command('discover')
-  .description('Discover and refresh all OpenClaw cron jobs')
-  .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
-  .action((options) => {
-    const configPath = options.config;
-    console.log('');
-    discover(configPath);
-    console.log('✓ Discovery complete\n');
-  });
-
-program
   .command('dashboard')
-  .description('Start web dashboard (localhost-only by default)')
-  .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
+  .description('Launch web dashboard showing all scheduled assets')
+  .option('-c, --config <path>', 'Path to cardioclaw.yml (run sync first)', 'cardioclaw.yml')
   .option('-p, --port <port>', 'Port number', '3333')
   .option('--remote', 'Enable network access (auto-detects Tailscale/LAN, requires token)')
   .option('--daemon', 'Run in background (prints token and exits)')
@@ -81,7 +64,7 @@ program
       
       // Build args without --daemon
       const args = ['dashboard'];
-      if (options.config !== 'cardioclaw.yaml') args.push('-c', options.config);
+      if (options.config !== 'cardioclaw.yml') args.push('-c', options.config);
       if (options.port !== '3333') args.push('-p', options.port);
       if (options.remote) args.push('--remote');
       
@@ -138,9 +121,48 @@ program
   });
 
 program
+  .command('validate')
+  .description('Detect and report config issues (read-only)')
+  .option('-v, --verbose', 'Show detailed warnings')
+  .action((options) => {
+    validate(options);
+  });
+
+// ============================================
+// Utility Commands (kept from v0.x)
+// ============================================
+
+program
+  .command('init')
+  .description('Create a starter cardioclaw.yml with detected timezone')
+  .action(() => init());
+
+program
+  .command('status')
+  .description('Show all heartbeats and system health')
+  .option('-c, --config <path>', 'Path to cardioclaw.yml', 'cardioclaw.yml')
+  .option('--no-refresh', 'Skip discovery refresh')
+  .option('--full', 'Show all jobs without truncating')
+  .action((options) => {
+    status(options);
+  });
+
+program
+  .command('runs [job-name]')
+  .description('Show execution history for a heartbeat')
+  .option('-c, --config <path>', 'Path to cardioclaw.yml', 'cardioclaw.yml')
+  .option('--all', 'Show runs for all jobs')
+  .option('--limit <n>', 'Number of runs to show', '20')
+  .option('--no-refresh', 'Skip discovery refresh')
+  .option('-v, --verbose', 'Show error messages')
+  .action((jobName, options) => {
+    showRuns(jobName, options);
+  });
+
+program
   .command('snapshot')
-  .description('Take a screenshot of the dashboard (starts, captures, shuts down)')
-  .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
+  .description('Take a screenshot of the dashboard')
+  .option('-c, --config <path>', 'Path to cardioclaw.yml', 'cardioclaw.yml')
   .option('-o, --output <path>', 'Output PNG path (default: temp file)')
   .option('-v, --view <view>', 'View to capture: hourly, calendar, or list', 'list')
   .option('--width <px>', 'Viewport width', '1400')
@@ -156,7 +178,6 @@ program
         height: parseInt(options.height, 10),
         wait: parseInt(options.wait, 10),
       });
-      // Print just the path so agents/scripts can capture it cleanly
       console.log(outputPath);
     } catch (err) {
       console.error('snapshot error:', err.message);
@@ -164,69 +185,21 @@ program
     }
   });
 
-program
-  .command('import')
-  .description('Import existing OpenClaw cron jobs and/or heartbeat configs into YAML')
-  .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
-  .option('--dry-run', 'Preview without writing changes')
-  .option('--heartbeat', 'Import heartbeat configs (and cron jobs)')
-  .option('--heartbeat-only', 'Import only heartbeat configs (skip cron jobs)')
-  .option('--all', 'Alias for --heartbeat (import both)')
-  .action((options) => {
-    // Handle --all alias
-    if (options.all) {
-      options.heartbeat = true;
-    }
-    importJobs(options);
-  });
-
-program
-  .command('dedupe')
-  .description('Remove duplicate cron jobs (keeps newest of each name)')
-  .option('--dry-run', 'Preview without removing')
-  .action((options) => {
-    dedupe(options);
-  });
-
-program
-  .command('remove <name>')
-  .description('Remove a heartbeat from OpenClaw and YAML')
-  .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
-  .option('--dry-run', 'Preview without removing')
-  .action((name, options) => {
-    remove(name, options);
-  });
-
-program
-  .command('prune')
-  .description('Remove old completed one-shot heartbeats from YAML')
-  .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
-  .option('--days <n>', 'Remove completed jobs older than N days')
-  .option('--before <date>', 'Remove completed jobs before date (YYYY-MM-DD)')
-  .option('--dry-run', 'Preview without removing')
-  .action((options) => {
-    prune(options);
-  });
-
-program
-  .command('runs [job-name]')
-  .description('Show execution history for a heartbeat')
-  .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
-  .option('--all', 'Show runs for all jobs')
-  .option('--limit <n>', 'Number of runs to show', '20')
-  .option('--no-refresh', 'Skip discovery refresh')
-  .option('-v, --verbose', 'Show error messages')
-  .action((jobName, options) => {
-    showRuns(jobName, options);
-  });
-
-program
-  .command('validate')
-  .description('Validate cardioclaw.yaml schema and configuration')
-  .option('-c, --config <path>', 'Path to cardioclaw.yaml', 'cardioclaw.yaml')
-  .action((options) => {
-    validate(options);
-  });
+// ============================================
+// Removed Commands (1.0)
+// ============================================
+// The following commands have been removed in 1.0:
+// - import: Use OpenClaw native tools to create cron jobs
+// - export: No longer needed (sync generates cardioclaw.yml)
+// - dedupe: Use OpenClaw cron management directly
+// - remove: Use `openclaw cron rm <id>`
+// - prune: No longer writing to OpenClaw configs
+//
+// CardioClaw 1.0 is a READ-ONLY lens into OpenClaw scheduling.
+// For job management, use:
+//   openclaw cron add ...
+//   openclaw cron rm <id>
+//   openclaw cron edit <id> ...
 
 program.parse(process.argv);
 
