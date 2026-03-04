@@ -254,7 +254,7 @@ User toggles between views with buttons (or keyboard shortcuts: `1`, `2`, `3`).
 ├────────────────────────────────────────────────────────────────────────┤
 │  Schedule:     0 8 * * * (Daily at 8:00 AM America/New_York)           │
 │  Agent:        beast                                                   │
-│  Delivery:     telegram → ***REMOVED***                                   │
+│  Delivery:     telegram → YOUR_CHAT_ID                                 │
 │  Next Run:     Tomorrow at 8:00 AM (in 15h 14m)                        │
 │  Last Run:     Today at 8:00 AM (✓ ok, 1m 26s)                         │
 │  Success Rate: 95% (19/20 last 7 days)                                 │

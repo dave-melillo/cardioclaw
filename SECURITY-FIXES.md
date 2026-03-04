@@ -1,6 +1,6 @@
 # Security Fixes - Dashboard Remote Access
 
-## Original Issue (Magneto Validation Report)
+## Original Issue
 
 **Severity:** FATAL  
 **Issue:** Authentication removed for network access  
@@ -24,7 +24,7 @@ cardioclaw dashboard
 
 ---
 
-## Fixes Applied (Commit 6621614)
+## Fixes Applied
 
 ### F1: Re-enable Token Authentication
 
@@ -133,8 +133,8 @@ $ cardioclaw dashboard --remote
 
 ✓ Dashboard running on Tailscale
 
-→ http://outrider.***REMOVED***.ts.net:3333
-→ http://***REMOVED***:3333
+→ http://your-server.tailnet.ts.net:3333
+→ http://100.x.x.x:3333
 
 🔐 Auth Token: a1b2c3d4e5f6
 
@@ -172,7 +172,7 @@ $ node -e "const {getBindAddress} = require('./lib/bind-address'); console.log(g
 
 # With --remote (network access + auth)
 $ node -e "const {getBindAddress} = require('./lib/bind-address'); console.log(getBindAddress({port: 3333, remote: true}));"
-{ address: '***REMOVED***', displayUrls: [...], mode: 'tailscale' }
+{ address: '100.x.x.x', displayUrls: [...], mode: 'tailscale' }
 ```
 
 ---
@@ -208,9 +208,8 @@ cardioclaw dashboard --remote → Network binding → Token auth → ✅ SECURE
 
 ## Validation Status
 
-**Magneto's Report:**
+**Initial Review:**
 - ❌ REJECTED (original PR)
-- Score: 50/100
 - Fatal Issues: 1
 - Critical Issues: 2
 
@@ -219,10 +218,4 @@ cardioclaw dashboard --remote → Network binding → Token auth → ✅ SECURE
 - ✅ C1 Resolved: Localhost-only default
 - ✅ C2 Resolved: Explicit warnings
 
-**Ready for:** Magneto re-validation
-
----
-
-**Commit:** 6621614  
-**Branch:** wolverine/remote-access  
-**PR:** https://github.com/dave-melillo/cardioclaw/pull/2
+**Ready for:** Final validation

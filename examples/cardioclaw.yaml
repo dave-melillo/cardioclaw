@@ -1,28 +1,39 @@
-# CardioClaw Configuration
+# CardioClaw Configuration Example
 # Docs: https://github.com/dave-melillo/cardioclaw
-# Imported: 2026-02-19T19:03:15.570Z
+#
+# This is an example configuration showing the heartbeat format.
+# Adjust schedules, prompts, and delivery targets to match your setup.
 
 heartbeats:
-  - name: Morning Briefing v3
+  # Daily morning briefing
+  - name: Morning Briefing
     schedule: 0 8 * * *
     prompt: |
       Run morning briefing: weather + calendar + inbox.
       Keep it under 6 sentences.
     delivery: telegram
-  - name: Evening Wrap-up v3
+
+  # Evening wrap-up (weekdays only)
+  - name: Evening Wrap-up
     schedule: 0 19 * * 1-5
     prompt: "Evening wrap: what got done today, what's tomorrow"
     delivery: telegram
+
+  # One-shot reminder (runs once at specific time)
   - name: Gym Reminder
-    schedule: at 2026-02-15 18:00
+    schedule: at 2026-12-15 18:00
     message: "Reminder: Gym at 6 PM! 🏋️"
     sessionTarget: main
     delivery: telegram
+
+  # Health check (every 2 hours, no delivery)
   - name: Session Health Check
     schedule: 0 */2 * * *
     prompt: Check session health. Only alert if context over 80%.
     delivery: none
     sessionTarget: isolated
+
+  # Weekly review (Fridays at 5 PM)
   - name: Weekly Review
     schedule: 0 17 * * 5
     prompt: |
@@ -32,169 +43,37 @@ heartbeats:
       - Any blockers or risks?
     delivery: telegram
     model: opus
+
+  # Automated sync task (every 30 minutes)
   - name: Trello Sync
     schedule: "*/30 * * * *"
-    prompt: "Run Trello sync: node /Users/dave/clawd/scripts/trello-sync.js. No need to report back."
+    prompt: "Run Trello sync: node ~/scripts/trello-sync.js"
     model: openrouter/moonshotai/kimi-k2.5
-  - name: CardioClaw Auto-Sync
-    schedule: "*/30 * * * *"
-    prompt: >-
-      Run cardioclaw import to sync any new OpenClaw cron jobs into the YAML file. No need to report back unless there
-      are errors.
-    model: openrouter/moonshotai/kimi-k2.5
-  - name: Hourly Memory Summary
-    schedule: 5 * * * *
-    prompt: >-
-      Run the hourly memory summary script: /Users/dave/clawd/scripts/hourly-memory-summary.sh
 
-
-      This captures the previous hour's activity and appends a summary to the daily memory file. Just run it and confirm
-      success.
-    model: openrouter/moonshotai/kimi-k2.5
-  - name: Session Health Check (2hr)
-    schedule: 0 */2 * * *
-    prompt: Check session health. If context over 80%, flush to memory file. Only alert Dave if critical.
-    model: openrouter/moonshotai/kimi-k2.5
-  - name: Agent Session Health Check
-    schedule: 0 */4 * * *
-    prompt: >-
-      Check X-Men agent session health. Use sessions_list to check each agent's context usage. If any agent session is
-      over 70% context, report which ones need attention. Keep response brief.
-    model: openrouter/moonshotai/kimi-k2.5
+  # Stretch reminder (every 2 hours)
   - name: Stretch Reminder
     schedule: 0 */2 * * *
-    message: 🧘 Time to stretch, cher! Stand up, roll those shoulders, touch your toes. Your back will thank you.
+    message: 🧘 Time to stretch! Stand up, roll those shoulders.
     sessionTarget: main
-  - name: Evening Wrap-up v2
-    schedule: 0 19 * * 1-5
-    prompt: >-
-      You are Dave's evening wrap-up assistant. Gather data, then deliver a brief end-of-day message.
 
-
-      STEP 1 — Gather data (run these commands):
-
-      ```
-
-      ***REMOVED*** gog calendar list --no-input --account ***REMOVED*** --plain
-
-      ***REMOVED*** gog gmail search "is:unread -category:promotions -category:social" --max 10 --no-input
-      --account ***REMOVED*** --plain
-
-      curl -s "wttr.in/New+York?format=%C+%t+%h+%w"
-
-      ```
-
-
-      STEP 2 — Send wrap-up via message tool (action=send, channel=telegram, target=***REMOVED***).
-
-
-      FORMAT RULES:
-
-      - Casual evening tone — winding down, not winding up
-
-      - Mention anything notable from today's calendar (if there were events)
-
-      - Preview tomorrow's schedule — bold the first meeting if any
-
-      - Flag any unread emails that look urgent or time-sensitive. Skip junk.
-
-      - If tomorrow looks busy, give a heads-up. If it's light, say so.
-
-      - End with something human — an observation, a suggestion to relax, whatever fits
-
-      - TOTAL LENGTH: 5-8 sentences max
-
-      - NO section headers. NO bullet lists. Conversational text only.
-
-      - Use emoji sparingly (1-2 max)
-    model: openrouter/moonshotai/kimi-k2.5
-    delivery: telegram
-  - name: Cash for Shower Reminder
-    schedule: at 2026-02-20 06:00
-    message: "🎉 Reminder: Get cash for the shower today!"
-    sessionTarget: main
-  - name: Morning Briefing v2
-    schedule: 0 8 * * *
-    prompt: >-
-      You are Dave's morning briefing assistant. Gather data, then deliver a SHORT conversational briefing.
-
-
-      STEP 1 — Gather data (run these commands):
-
-      ```
-
-      ***REMOVED*** gog calendar list --no-input --account ***REMOVED*** --plain
-
-      ***REMOVED*** gog gmail search "is:unread -category:promotions -category:social" --max 10 --no-input
-      --account ***REMOVED*** --plain
-
-      curl -s "wttr.in/New+York?format=%C+%t+%h+%w"
-
-      ```
-
-
-      STEP 2 — Send briefing via message tool (action=send, channel=telegram, target=***REMOVED***).
-
-
-      FORMAT RULES:
-
-      - Start with a casual greeting (vary it daily — no "Good morning, Dave" every time)
-
-      - Weather in one line, naturally woven in
-
-      - Calendar: mention today's events conversationally. Bold the first meeting. If nothing today, mention next
-      upcoming thing.
-
-      - Email: only mention emails that seem important or actionable (skip newsletters, notifications, spam). If nothing
-      interesting, skip this section entirely.
-
-      - End with one useful thought or suggestion — keep it real, not corporate
-
-      - TOTAL LENGTH: 6-10 sentences max. This is a quick coffee-companion briefing, not a report.
-
-      - Use emoji sparingly (1-2 max)
-
-      - NO section headers. NO bullet lists. Just flowing text like a friend texting you.
-    model: openrouter/moonshotai/kimi-k2.5
-    delivery: telegram
-  - name: Work Calendar Screenshot Prompt
-    schedule: 0 9 * * 1-5
-    message: "🟢 ROGUE REMINDER: Send Dave a casual Telegram reminder to screenshot his Outlook work calendar and send it here."
-    sessionTarget: main
-  - name: Cake Pickup Reminder
-    schedule: at 2026-02-20 09:00
-    message: "🎂 Reminder: Pick up the cake today!"
-    sessionTarget: main
-  - name: "Rogue: Weekly Security Review"
+  # Weekly security audit (Saturdays at 10 AM)
+  - name: Weekly Security Review
     schedule: 0 10 * * 6
     message: >-
-      🟢 ROGUE WEEKLY SECURITY REVIEW: Time for the weekly security audit! Run: 1) Check file permissions on sensitive
-      files, 2) Review Tailscale status, 3) Check gateway status and logs. Write report to
-      /Users/dave/clawd/security/audit-YYYY-MM-DD.md and send Dave a summary.
+      Weekly security review time. Run checklist:
+      1) Check file permissions
+      2) Review Tailscale status
+      3) Check gateway logs
     sessionTarget: main
+
+  # Monthly cleanup (first Sunday of month at 3 AM)
   - name: Monthly VPS Cleanup
     schedule: 0 3 1-7 * 0
     prompt: |-
-      Run the monthly cleanup script: bash /Users/dave/clawd/scripts/monthly-cleanup.sh
+      Run monthly cleanup script: bash ~/scripts/monthly-cleanup.sh
 
-      Capture the full output and send a summary to Dave via Telegram (channel=telegram, to=***REMOVED***) with:
+      Report:
       - How much space was freed
       - Before/after disk usage
-      - Keep it brief and friendly
     model: openrouter/moonshotai/kimi-k2.5
     delivery: telegram
-  - name: Weekly Security Review
-    schedule: 0 22 * * 0
-    message: >-
-      Weekly security review time. Run the checklist at /Users/dave/clawd/scripts/security-checklist.md. Execute each
-      check, fix what you can silently, and report any findings or issues to Dave.
-    sessionTarget: main
-  - name: Weekly Backlog Grooming
-    schedule: 0 9 * * 1
-    prompt: |-
-      Run the backlog grooming script and report findings:
-
-      node /Users/dave/clawd/scripts/backlog-groom.js --fix --verbose
-
-      Summarize what was fixed and any items needing attention. Send report to Dave via Telegram.
-    model: openrouter/moonshotai/kimi-k2.5
